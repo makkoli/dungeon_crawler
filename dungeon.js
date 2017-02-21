@@ -105,7 +105,7 @@ DungeonCrawler.defaultProps = {
         type: "weapon",
         num: 1,
         name: "Dagger",
-        attack: 10,
+        damage: 10,
         imgFile: "images/dagger_25x25.png"
     }
 };

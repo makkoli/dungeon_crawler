@@ -313,31 +313,14 @@ var DC_Maze = function () {
     return DC_Maze;
 }();
 
-var DC_Player = function () {
-    function DC_Player(type, atkDmg, atkModifier, img, location) {
-        _classCallCheck(this, DC_Player);
+var DC_Player = function DC_Player(type, atkDmg, imgFile) {
+    _classCallCheck(this, DC_Player);
 
-        this.health = 100;
-        this.damage = atkDmg;
-        this.damageModifier = atkModifier;
-        this.imageLocation = img;
-        this.location = location;
-    }
-
-    _createClass(DC_Player, [{
-        key: 'attack',
-        value: function attack() {
-            return this.damage + Math.floor(Math.random() * this.damageModifier);
-        }
-    }, {
-        key: 'image',
-        value: function image() {
-            return this.imageLocation;
-        }
-    }]);
-
-    return DC_Player;
-}();
+    this.type = type;
+    this.health = 100;
+    this.attack = atkDmg;
+    this.imageFile = imgFile;
+};
 
 // Parent prototype for items(weapons, potions, etc)
 
@@ -399,7 +382,7 @@ var DC_Weapon = function (_DC_Item2) {
     function DC_Weapon(_ref2) {
         var type = _ref2.type,
             name = _ref2.name,
-            attack = _ref2.attack,
+            damage = _ref2.damage,
             imgFile = _ref2.imgFile;
 
         _classCallCheck(this, DC_Weapon);
@@ -407,7 +390,7 @@ var DC_Weapon = function (_DC_Item2) {
         var _this2 = _possibleConstructorReturn(this, (DC_Weapon.__proto__ || Object.getPrototypeOf(DC_Weapon)).call(this, type, imgFile));
 
         _this2.name = name;
-        _this2.attack = attack;
+        _this2.damage = damage;
         return _this2;
     }
 

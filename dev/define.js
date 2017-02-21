@@ -256,20 +256,11 @@ class DC_Maze {
 }
 
 class DC_Player {
-    constructor(type, atkDmg, atkModifier, img, location) {
+    constructor(type, atkDmg, imgFile) {
+        this.type = type;
         this.health = 100;
-        this.damage = atkDmg;
-        this.damageModifier = atkModifier;
-        this.imageLocation = img;
-        this.location = location;
-    }
-
-    attack() {
-        return this.damage + Math.floor((Math.random() * this.damageModifier));
-    }
-
-    image() {
-        return this.imageLocation;
+        this.attack = atkDmg;
+        this.imageFile = imgFile;
     }
 }
 
@@ -308,10 +299,10 @@ class DC_Weapon extends DC_Item {
     //    name: name of the weapon
     //    attack: attack damage of the weapon
     //    imgFile: image file to display
-    constructor({type: type, name: name, attack: attack, imgFile: imgFile}) {
+    constructor({type: type, name: name, damage: damage, imgFile: imgFile}) {
         super(type, imgFile);
         this.name = name;
-        this.attack = attack;
+        this.damage = damage;
     }
 }
 
