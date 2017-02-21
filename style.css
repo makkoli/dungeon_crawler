@@ -1,0 +1,45 @@
+body {
+  margin: 0 auto;
+  background-color: black; }
+
+#dungeon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-right: -50%;
+  transform: translate(-50%, -50%);
+  height: auto;
+  width: auto; }
+
+.dungeon-container {
+  padding: 0;
+  height: auto;
+  width: auto;
+  border: 25px solid transparent;
+  -webkit-border-image: url(images/stone_border.png) 25 repeat;
+  -moz-border-image: url(images/stone_border.png) 25 repeat;
+  -o-border-image: url(images/stone_border.png) 25 repeat;
+  border-image: url(images/stone_border.png) 25 repeat; }
+
+.dungeon-tile-row {
+  display: block; }
+
+.dungeon-tile-opening {
+  display: inline-block;
+  width: 25px;
+  height: 25px;
+  background-image: url("./images/ground_25x25.png"); }
+  .dungeon-tile-opening img {
+    width: 25px;
+    height: 25px;
+    margin: 0;
+    padding: 0;
+    display: inline; }
+
+.dungeon-tile-wall {
+  display: inline-block;
+  width: 25px;
+  height: 25px;
+  background-image: url("./images/stone_25x25.png"); }
+
+/*# sourceMappingURL=style.css.map */
