@@ -4,9 +4,68 @@
 class DungeonCrawler extends React.Component {
     constructor(props) {
         super(props);
+        // setup player
+        this.player = new DC_Human(this.props.humanPlayer);
+        // setup level
         this.levelOne = new DC_Level(this.props.levelWidth,
-            this.props.levelHeight, this.props.potion, this.props.weaponOne,
-            this.props.endPortal);
+            this.props.levelHeight, this.props.endPortal);
+
+        // add potions
+        let i = this.props.potion.num;
+        while (i > 0) {
+            this.levelOne.addMarker(new DC_Potion(this.props.potion));
+            i--;
+        }
+
+        // add weapon(s)
+        i = this.props.weaponOne.num;
+        while (i > 0) {
+            this.levelOne.addMarker(new DC_Weapon(this.props.weaponOne));
+            i--;
+        }
+
+        // add enemies
+        i = this.props.enemyOne.num;
+        while (i > 0) {
+            this.levelOne.addMarker(new DC_Enemy(this.props.enemyOne));
+            i--;
+        }
+
+        // set state for the players current tile
+        this.state = {
+            playerTile: this.levelOne.addPlayer(this.player)
+        };
+
+        // add listener for user input
+        document.addEventListener('keydown', this.movePlayer.bind(this));
+    }
+
+    movePlayer(event) {
+        switch (event.key) {
+            case "ArrowUp":
+                this.setState({
+                    playerTile: this.levelOne.movePlayer("up", this.player, ...this.state.playerTile)
+                });
+                break;
+            case "ArrowDown":
+                this.setState({
+                    playerTile: this.levelOne.movePlayer("down", this.player, ...this.state.playerTile)
+                });
+                break;
+            case "ArrowLeft":
+                this.setState({
+                    playerTile: this.levelOne.movePlayer("left", this.player, ...this.state.playerTile)
+                });
+                break;
+            case "ArrowRight":
+                this.setState({
+                    playerTile: this.levelOne.movePlayer("right", this.player, ...this.state.playerTile)
+                });
+                break;
+            // ignore if not a move command
+            default:
+                break;
+        }
     }
 
     render() {
@@ -21,7 +80,11 @@ class DungeonCrawler extends React.Component {
             tiles.push(<DungeonTileRow tiles={tileRow} key={i} />);
             tileRow = [];
         }
-        return <div className="dungeon-container">{tiles}</div>;
+        return (
+            <div className="dungeon-container">
+                {tiles}
+            </div>
+        );
     }
 }
 
@@ -30,9 +93,6 @@ const DungeonTileRow = (props) => {
 }
 
 const DungeonTile = (props) => {
-    if (!!props.tileMarker) {
-        console.log(props.tileMarker);
-    }
     return <div className={props.tileBG === "wall" ?
         "dungeon-tile-wall" : "dungeon-tile-opening"}>
             {
@@ -67,8 +127,8 @@ DungeonCrawler.propTypes = {
 }
 
 DungeonCrawler.defaultProps = {
-    levelWidth: 30,
-    levelHeight: 30,
+    levelWidth: 25,
+    levelHeight: 25,
     potion: {
         type: "potion",
         num: 5,             // num to add
@@ -85,6 +145,20 @@ DungeonCrawler.defaultProps = {
         name: "Dagger",
         damage: 10,
         imgFile: "images/dagger_25x25.png"
+    },
+    enemyOne: {
+        type: "enemy",
+        num: 10,
+        name: "Bug",
+        atkDmg: 5,
+        imgFile: "images/bug_25x25.png"
+    },
+    humanPlayer: {
+        type: "human",
+        num: 1,
+        name: "Hero",
+        atkDmg: 5,
+        imgFile: "images/player_25x25.png"
     }
 };
 
