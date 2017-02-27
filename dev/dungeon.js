@@ -44,22 +44,26 @@ class DungeonCrawler extends React.Component {
         switch (event.key) {
             case "ArrowUp":
                 this.setState({
-                    playerTile: this.levelOne.movePlayer("up", this.player, ...this.state.playerTile)
+                    playerTile: this.levelOne.movePlayer("up", this.player,
+                        ...this.state.playerTile)
                 });
                 break;
             case "ArrowDown":
                 this.setState({
-                    playerTile: this.levelOne.movePlayer("down", this.player, ...this.state.playerTile)
+                    playerTile: this.levelOne.movePlayer("down",
+                        this.player, ...this.state.playerTile)
                 });
                 break;
             case "ArrowLeft":
                 this.setState({
-                    playerTile: this.levelOne.movePlayer("left", this.player, ...this.state.playerTile)
+                    playerTile: this.levelOne.movePlayer("left", this.player,
+                        ...this.state.playerTile)
                 });
                 break;
             case "ArrowRight":
                 this.setState({
-                    playerTile: this.levelOne.movePlayer("right", this.player, ...this.state.playerTile)
+                    playerTile: this.levelOne.movePlayer("right", this.player,
+                        ...this.state.playerTile)
                 });
                 break;
             // ignore if not a move command
@@ -151,13 +155,16 @@ DungeonCrawler.defaultProps = {
         num: 10,
         name: "Bug",
         atkDmg: 5,
+        health: 20,
         imgFile: "images/bug_25x25.png"
     },
     humanPlayer: {
         type: "human",
         num: 1,
         name: "Hero",
+        weapon: "Fists",
         atkDmg: 5,
+        health: 100,
         imgFile: "images/player_25x25.png"
     }
 };

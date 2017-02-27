@@ -175,13 +175,16 @@ DungeonCrawler.defaultProps = {
         num: 10,
         name: "Bug",
         atkDmg: 5,
+        health: 20,
         imgFile: "images/bug_25x25.png"
     },
     humanPlayer: {
         type: "human",
         num: 1,
         name: "Hero",
+        weapon: "Fists",
         atkDmg: 5,
+        health: 100,
         imgFile: "images/player_25x25.png"
     }
 };

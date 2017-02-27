@@ -51,25 +51,41 @@ class DC_Level {
         switch (direction) {
             case "up":
                 if (this.checkForCollision(x, y - 1)) {
-                    return this.handleCollision(x, y - 1);
+                    if (this.handleCollision(playerObj, {x: x, y: y} ,
+                            {x: x, y: y - 1})) {
+                        return [x, y - 1];
+                    }
+                    return [x, y];
                 }
                 this.level.updateMarker(playerObj, {x: x, y: y}, {x: x, y: y - 1});
                 return [x, y - 1];
             case "down":
                 if (this.checkForCollision(x, y + 1)) {
-                    return this.handleCollision(x, y + 1);
+                    if (this.handleCollision(playerObj, {x: x, y: y},
+                            {x: x, y: y + 1})) {
+                        return [x, y + 1];
+                    }
+                    return [x, y];
                 }
                 this.level.updateMarker(playerObj, {x: x, y: y}, {x: x, y: y + 1});
                 return [x, y + 1];
             case "right":
                 if (this.checkForCollision(x + 1, y)) {
-                    return this.handleCollision(x + 1, y);
+                    if (this.handleCollision(playerObj, {x: x, y: y},
+                            {x: x + 1, y: y})) {
+                        return [x + 1, y];
+                    }
+                    return [x, y];
                 }
                 this.level.updateMarker(playerObj, {x: x, y: y}, {x: x + 1, y: y});
                 return [x + 1, y];
             case "left":
                 if (this.checkForCollision(x - 1, y)) {
-                    return this.handleCollision(x - 1, y);
+                    if (this.handleCollision(playerObj, {x: x, y: y},
+                            {x: x - 1, y: y})) {
+                        return [x - 1, y];
+                    }
+                    return [x, y];
                 }
                 this.level.updateMarker(playerObj, {x: x, y: y}, {x: x - 1, y: y});
                 return [x - 1, y];
@@ -83,7 +99,6 @@ class DC_Level {
     // given: x, y coordinates
     // expected: true if marker/wall exists, false otherwise
     checkForCollision(x, y) {
-        console.log('check collision');
         return (this.level.getTile(x, y) === "wall" ||
             !!this.level.getMarker(x, y));
     }
@@ -94,18 +109,38 @@ class DC_Level {
     // given: playerObj representing the player
     //        x, y is the new x, y position of the player and there is a marker
     //        on the x,y position
-    // expected: either the player moves to the position or an event occurs
-    //           i.e. the player attacks an enemy
-    handleCollision(playerObj, x, y) {
-        console.log('handle collision');
+    // expected: true if the player can move after collision, false otherwise
+    handleCollision(playerObj, oldPosn, newPosn) {
         // if wall, just return current location
-        if (this.level.getTile(x, y) === "wall") {
-            return [x, y];
+        if (this.level.getTile(oldPosn.x, oldPosn.y) === "wall") {
+            return false;
         }
 
-        let markerDesc = this.level.getMarker(x, y);
-        console.log(markerDesc);
-        return [x, y];
+        let markerDesc = this.level.getMarker(newPosn.x, newPosn.y);
+        switch (markerDesc.type) {
+            // potion heal marker
+            case "potion":
+                playerObj.heal(markerDesc.potionValue);
+                this.level.updateMarker(playerObj, oldPosn, newPosn);
+                return true;
+            // upgrade weapon marker
+            case "weapon":
+                playerObj.updateWeapon(markerDesc.name, markerDesc.damage);
+                this.level.updateMarker(playerObj, oldPosn, newPosn);
+                return true;
+            // fight enemy marker
+            case "enemy":
+                markerDesc.takeDamage(playerObj.attack);
+                playerObj.takeDamage(markerDesc.attack);
+                if (markerDesc.health <= 0) {
+                    this.level.updateMarker(playerObj, oldPosn, newPosn);
+                    return true;
+                }
+                return false;
+            // unknown marker, cannot deal
+            default:
+                return false;
+        }
     }
 
     // null -> Number
@@ -123,12 +158,15 @@ class DC_Level {
     }
 
     // Number Number -> String
-    // Returns the current tile's marker
-    // given: x and y that point to a wall marker, expected: 'wall'
+    // Returns the current tile's string
+    // given: x and y that point to a wall marker, expected: 'wall' or 'opening'
     getTile(x, y) {
         return this.level.getTile(x, y);
     }
 
+    // Number Number -> Object
+    // Returns the object marker at a location on the maze
+    // given: x and y that points to a marker object, expected: object marker
     getMarker(x, y) {
         return this.level.getMarker(x, y);
     }
@@ -355,7 +393,7 @@ class DC_Maze {
     //        newPosn being an x,y coordinate of the markers new position
     // expected: true if marker is moved, false otherwise
     updateMarker(markerObj, oldPosn, newPosn) {
-        if (this.getTile(oldPosn.x, oldPosn.y) === "wall") {
+        if (this.getTile(newPosn.x, newPosn.y) === "wall") {
             return false;
         }
         this.maze[oldPosn.x + (oldPosn.y * this.tilesWide)] = OPENING_CHAR;
@@ -375,20 +413,30 @@ class DC_Player {
     //      attack: how much attack damage the player has
     //      name: the name of the player
     //      imageFile: where to find the image to display the player
-    constructor(type, atkDmg, name, imgFile) {
+    constructor(type, atkDmg, name, health, imgFile) {
         this.type = type;
-        this.health = 100;
+        this.health = health;
         this.attack = atkDmg;
         this.name = name;
         this.imgFile = imgFile;
+    }
+
+    // Number -> Number
+    // The player object takes damage
+    // given: a player object with 100 health takes 20 damage
+    // expected: 80
+    takeDamage(damage) {
+        this.health -= damage;
+        return this.health;
     }
 }
 
 // DC_Enemy is a class that holds the data and methods of an enemy in the level
 class DC_Enemy extends DC_Player {
     // DC_Enemy constructor creates an enemy object to place on the level
-    constructor({type: type, atkDmg: atkDmg, name: name, imgFile: imgFile}) {
-        super(type, atkDmg, name, imgFile);
+    constructor({type: type, atkDmg: atkDmg, name: name, health: health,
+                imgFile: imgFile}) {
+        super(type, atkDmg, name, health, imgFile);
     }
 }
 
@@ -396,8 +444,34 @@ class DC_Enemy extends DC_Player {
 // the level
 class DC_Human extends DC_Player {
     // DC_Human constructor creates a human object to place on the level
-    constructor({type: type, atkDmg: atkDmg, name: name, imgFile: imgFile}) {
-        super(type, atkDmg, name, imgFile);
+    constructor({type: type, atkDmg: atkDmg, name: name, weapon: weapon,
+                health: health, imgFile: imgFile}) {
+        super(type, atkDmg, name, health, imgFile);
+        this.weapon = weapon;
+    }
+
+    // Number -> Number
+    // Heals the human player by healthRestore amount
+    // given: a health restore amount of 20 and a player with 80 health
+    // expected: 100
+    heal(healthRestore) {
+        if (this.health + healthRestore > 100) {
+            this.health = 100;
+        }
+        else {
+            this.health += healthRestore;
+        }
+        return this.health;
+    }
+
+    // String Number -> String
+    // Updates the human players weapon and attack damage
+    // given: a weapon by name of sword and damage 20
+    // expected: human player has a sword weapon with 20 damage
+    updateWeapon(newWeapon, newDamage) {
+        this.weapon = newWeapon;
+        this.attack = newDamage;
+        return this.weapon;
     }
 }
 
