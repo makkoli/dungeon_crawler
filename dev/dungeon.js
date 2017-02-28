@@ -4,11 +4,10 @@
 class DungeonCrawler extends React.Component {
     constructor(props) {
         super(props);
-        // setup player
-        this.player = new DC_Human(this.props.humanPlayer);
         // setup level
         this.levelOne = new DC_Level(this.props.levelWidth,
-            this.props.levelHeight, this.props.endPortal);
+            this.props.levelHeight, this.props.humanPlayer,
+            this.props.endPortal);
 
         // add potions
         let i = this.props.potion.num;
@@ -33,7 +32,7 @@ class DungeonCrawler extends React.Component {
 
         // set state for the players current tile
         this.state = {
-            playerTile: this.levelOne.addPlayer(this.player)
+            playerTile: this.levelOne.getPlayerPosition()
         };
 
         // add listener for user input
@@ -44,25 +43,25 @@ class DungeonCrawler extends React.Component {
         switch (event.key) {
             case "ArrowUp":
                 this.setState({
-                    playerTile: this.levelOne.movePlayer("up", this.player,
+                    playerTile: this.levelOne.movePlayer("up",
                         ...this.state.playerTile)
                 });
                 break;
             case "ArrowDown":
                 this.setState({
                     playerTile: this.levelOne.movePlayer("down",
-                        this.player, ...this.state.playerTile)
+                        ...this.state.playerTile)
                 });
                 break;
             case "ArrowLeft":
                 this.setState({
-                    playerTile: this.levelOne.movePlayer("left", this.player,
+                    playerTile: this.levelOne.movePlayer("left",
                         ...this.state.playerTile)
                 });
                 break;
             case "ArrowRight":
                 this.setState({
-                    playerTile: this.levelOne.movePlayer("right", this.player,
+                    playerTile: this.levelOne.movePlayer("right",
                         ...this.state.playerTile)
                 });
                 break;
@@ -131,8 +130,8 @@ DungeonCrawler.propTypes = {
 }
 
 DungeonCrawler.defaultProps = {
-    levelWidth: 25,
-    levelHeight: 25,
+    levelWidth: 20,
+    levelHeight: 20,
     potion: {
         type: "potion",
         num: 5,             // num to add

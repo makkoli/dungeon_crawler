@@ -11,13 +11,16 @@ const START_POS_Y = 0;
 // Start position will always be top left and end position will be bottom right
 class DC_Level {
     // DC_Level constructor creates an object that manages a randomly generated
-    // level. Also, takes and adds markers for potions, weapon(s), enemies, and
-    // the end portal for the level.
+    // level. Also, takes and adds markers for potions, weapon(s), enemies, the
+    // human player, and the end portal for the level.
     //  interpretation:
     //      level: level holds the randomly generated maze with markers on it
-    constructor(tilesWide = 30, tilesHigh = 30, endPortal) {
+    //      player: holds the human player state
+    constructor(tilesWide = 30, tilesHigh = 30, humanPlayer, endPortal) {
         this.level = new DC_Maze(tilesWide, tilesHigh);
         this.level.addEndCell(this.level.maze, new DC_Portal(endPortal));
+        this.player = new DC_Human(humanPlayer);
+        this.player.position = this.addPlayer(this.player);
     }
 
     // Object -> null
@@ -39,6 +42,14 @@ class DC_Level {
         return [START_POS_X, START_POS_Y];
     }
 
+    // null -> Number
+    // Returns the current position of the human player on the level
+    // given: a player in position 5 on the level
+    // expected: 5
+    getPlayerPosition() {
+        return this.player.position;
+    }
+
     // String Object Number Number -> [Number]
     // Moves the player in one of four directions
     // given: direction to move the player
@@ -47,47 +58,47 @@ class DC_Level {
     //        y coordinate of the player object
     // expected: [x, y] coordinate array signifying the new location of the
     //           player object
-    movePlayer(direction, playerObj, x, y) {
+    movePlayer(direction, x, y) {
         switch (direction) {
             case "up":
                 if (this.checkForCollision(x, y - 1)) {
-                    if (this.handleCollision(playerObj, {x: x, y: y} ,
+                    if (this.handleCollision(this.player, {x: x, y: y} ,
                             {x: x, y: y - 1})) {
                         return [x, y - 1];
                     }
                     return [x, y];
                 }
-                this.level.updateMarker(playerObj, {x: x, y: y}, {x: x, y: y - 1});
+                this.level.updateMarker(this.player, {x: x, y: y}, {x: x, y: y - 1});
                 return [x, y - 1];
             case "down":
                 if (this.checkForCollision(x, y + 1)) {
-                    if (this.handleCollision(playerObj, {x: x, y: y},
+                    if (this.handleCollision(this.player, {x: x, y: y},
                             {x: x, y: y + 1})) {
                         return [x, y + 1];
                     }
                     return [x, y];
                 }
-                this.level.updateMarker(playerObj, {x: x, y: y}, {x: x, y: y + 1});
+                this.level.updateMarker(this.player, {x: x, y: y}, {x: x, y: y + 1});
                 return [x, y + 1];
             case "right":
                 if (this.checkForCollision(x + 1, y)) {
-                    if (this.handleCollision(playerObj, {x: x, y: y},
+                    if (this.handleCollision(this.player, {x: x, y: y},
                             {x: x + 1, y: y})) {
                         return [x + 1, y];
                     }
                     return [x, y];
                 }
-                this.level.updateMarker(playerObj, {x: x, y: y}, {x: x + 1, y: y});
+                this.level.updateMarker(this.player, {x: x, y: y}, {x: x + 1, y: y});
                 return [x + 1, y];
             case "left":
                 if (this.checkForCollision(x - 1, y)) {
-                    if (this.handleCollision(playerObj, {x: x, y: y},
+                    if (this.handleCollision(this.player, {x: x, y: y},
                             {x: x - 1, y: y})) {
                         return [x - 1, y];
                     }
                     return [x, y];
                 }
-                this.level.updateMarker(playerObj, {x: x, y: y}, {x: x - 1, y: y});
+                this.level.updateMarker(this.player, {x: x, y: y}, {x: x - 1, y: y});
                 return [x - 1, y];
             default:
                 return [x, y];
@@ -444,10 +455,14 @@ class DC_Enemy extends DC_Player {
 // the level
 class DC_Human extends DC_Player {
     // DC_Human constructor creates a human object to place on the level
+    // interpretation:
+    //      weapon: current weapon of human player
+    //      position: current position on the level of the player
     constructor({type: type, atkDmg: atkDmg, name: name, weapon: weapon,
                 health: health, imgFile: imgFile}) {
         super(type, atkDmg, name, health, imgFile);
         this.weapon = weapon;
+        this.position = 0;
     }
 
     // Number -> Number

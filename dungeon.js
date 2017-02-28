@@ -18,12 +18,10 @@ var DungeonCrawler = function (_React$Component) {
     function DungeonCrawler(props) {
         _classCallCheck(this, DungeonCrawler);
 
-        // setup player
+        // setup level
         var _this = _possibleConstructorReturn(this, (DungeonCrawler.__proto__ || Object.getPrototypeOf(DungeonCrawler)).call(this, props));
 
-        _this.player = new DC_Human(_this.props.humanPlayer);
-        // setup level
-        _this.levelOne = new DC_Level(_this.props.levelWidth, _this.props.levelHeight, _this.props.endPortal);
+        _this.levelOne = new DC_Level(_this.props.levelWidth, _this.props.levelHeight, _this.props.humanPlayer, _this.props.endPortal);
 
         // add potions
         var i = _this.props.potion.num;
@@ -48,7 +46,7 @@ var DungeonCrawler = function (_React$Component) {
 
         // set state for the players current tile
         _this.state = {
-            playerTile: _this.levelOne.addPlayer(_this.player)
+            playerTile: _this.levelOne.getPlayerPosition()
         };
 
         // add listener for user input
@@ -64,22 +62,22 @@ var DungeonCrawler = function (_React$Component) {
             switch (event.key) {
                 case "ArrowUp":
                     this.setState({
-                        playerTile: (_levelOne = this.levelOne).movePlayer.apply(_levelOne, ["up", this.player].concat(_toConsumableArray(this.state.playerTile)))
+                        playerTile: (_levelOne = this.levelOne).movePlayer.apply(_levelOne, ["up"].concat(_toConsumableArray(this.state.playerTile)))
                     });
                     break;
                 case "ArrowDown":
                     this.setState({
-                        playerTile: (_levelOne2 = this.levelOne).movePlayer.apply(_levelOne2, ["down", this.player].concat(_toConsumableArray(this.state.playerTile)))
+                        playerTile: (_levelOne2 = this.levelOne).movePlayer.apply(_levelOne2, ["down"].concat(_toConsumableArray(this.state.playerTile)))
                     });
                     break;
                 case "ArrowLeft":
                     this.setState({
-                        playerTile: (_levelOne3 = this.levelOne).movePlayer.apply(_levelOne3, ["left", this.player].concat(_toConsumableArray(this.state.playerTile)))
+                        playerTile: (_levelOne3 = this.levelOne).movePlayer.apply(_levelOne3, ["left"].concat(_toConsumableArray(this.state.playerTile)))
                     });
                     break;
                 case "ArrowRight":
                     this.setState({
-                        playerTile: (_levelOne4 = this.levelOne).movePlayer.apply(_levelOne4, ["right", this.player].concat(_toConsumableArray(this.state.playerTile)))
+                        playerTile: (_levelOne4 = this.levelOne).movePlayer.apply(_levelOne4, ["right"].concat(_toConsumableArray(this.state.playerTile)))
                     });
                     break;
                 // ignore if not a move command
@@ -151,8 +149,8 @@ DungeonCrawler.propTypes = {
 };
 
 DungeonCrawler.defaultProps = {
-    levelWidth: 25,
-    levelHeight: 25,
+    levelWidth: 20,
+    levelHeight: 20,
     potion: {
         type: "potion",
         num: 5, // num to add
