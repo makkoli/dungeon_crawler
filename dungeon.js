@@ -15,41 +15,26 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 var DungeonCrawler = function (_React$Component) {
     _inherits(DungeonCrawler, _React$Component);
 
+    // Create a DungeonCrawler component object
+    // interpretation:
+    //      levelNum: current level number
+    //      level: current level being used for the game
     function DungeonCrawler(props) {
         _classCallCheck(this, DungeonCrawler);
 
         // setup level
         var _this = _possibleConstructorReturn(this, (DungeonCrawler.__proto__ || Object.getPrototypeOf(DungeonCrawler)).call(this, props));
 
-        _this.levelOne = new DC_Level(_this.props.levelWidth, _this.props.levelHeight, _this.props.humanPlayer, _this.props.endPortal);
-
-        // add potions
-        var i = _this.props.potion.num;
-        while (i > 0) {
-            _this.levelOne.addMarker(new DC_Potion(_this.props.potion));
-            i--;
-        }
-
-        // add weapon(s)
-        i = _this.props.weaponOne.num;
-        while (i > 0) {
-            _this.levelOne.addMarker(new DC_Weapon(_this.props.weaponOne));
-            i--;
-        }
-
-        // add enemies
-        i = _this.props.enemyOne.num;
-        while (i > 0) {
-            _this.levelOne.addMarker(new DC_Enemy(_this.props.enemyOne));
-            i--;
-        }
+        _this.levelNum = 1;
+        _this.level = _this.setupLevel(_this.props.levelWidth, _this.props.levelHeight, _this.props.humanPlayer, _this.props.endPortal, _this.props.potions, _this.props.weapons[_this.levelNum], _this.props.enemies[_this.levelNum]);
 
         // set state for the header and players current tile position
         _this.state = {
-            level: 1,
-            playerInfo: _this.levelOne.getPlayerInfo(),
-            collisionInfo: _this.levelOne.getCollisionInfo(),
-            playerTile: _this.levelOne.getPlayerPosition()
+            levelNum: _this.levelNum,
+            level: _this.level,
+            playerInfo: _this.level.getPlayerInfo(),
+            collisionInfo: _this.level.getCollisionInfo(),
+            playerTile: _this.level.getPlayerPosition()
         };
 
         // add listener for user input
@@ -57,63 +42,107 @@ var DungeonCrawler = function (_React$Component) {
         return _this;
     }
 
+    // initialize a level with given parameters
+    // interpretation:
+    //    width: width of level
+    //    height: height of level
+    //    player: params for player object
+    //    endPortal: params for end portal object
+    //    potion: params for potion object
+    //    weapon: params for weapon object
+    //    enemy: params for enemy object
+
+
     _createClass(DungeonCrawler, [{
+        key: "setupLevel",
+        value: function setupLevel(width, height, player, endPortal, potion, weapon, enemy) {
+            var level = new DC_Level(width, height, player, endPortal);
+
+            var i = potion.num;
+            // add potions
+            while (i > 0) {
+                level.addMarker(new DC_Potion(potion));
+                i--;
+            }
+
+            // add weapon(s)
+            i = weapon.num;
+            while (i > 0) {
+                level.addMarker(new DC_Weapon(weapon));
+                i--;
+            }
+
+            // add enemies
+            i = enemy.num;
+            while (i > 0) {
+                level.addMarker(new DC_Enemy(enemy));
+                i--;
+            }
+
+            return level;
+        }
+
+        // Move the player when he pushes an arrow key
+        // given: down arrow, expected: player moves down a row
+
+    }, {
         key: "movePlayer",
         value: function movePlayer(event) {
-            var _levelOne, _levelOne2, _levelOne3, _levelOne4;
-
             switch (event.key) {
                 case "ArrowUp":
-                    this.setState({
-                        playerTile: (_levelOne = this.levelOne).movePlayer.apply(_levelOne, ["up"].concat(_toConsumableArray(this.state.playerTile))),
-                        playerInfo: this.levelOne.getPlayerInfo(),
-                        collisionInfo: this.levelOne.getCollisionInfo()
-                    });
+                    this.movePlayerSetState("up");
                     break;
                 case "ArrowDown":
-                    this.setState({
-                        playerTile: (_levelOne2 = this.levelOne).movePlayer.apply(_levelOne2, ["down"].concat(_toConsumableArray(this.state.playerTile))),
-                        playerInfo: this.levelOne.getPlayerInfo(),
-                        collisionInfo: this.levelOne.getCollisionInfo()
-                    });
+                    this.movePlayerSetState("down");
                     break;
                 case "ArrowLeft":
-                    this.setState({
-                        playerTile: (_levelOne3 = this.levelOne).movePlayer.apply(_levelOne3, ["left"].concat(_toConsumableArray(this.state.playerTile))),
-                        playerInfo: this.levelOne.getPlayerInfo(),
-                        collisionInfo: this.levelOne.getCollisionInfo()
-                    });
+                    this.movePlayerSetState("left");
                     break;
                 case "ArrowRight":
-                    this.setState({
-                        playerTile: (_levelOne4 = this.levelOne).movePlayer.apply(_levelOne4, ["right"].concat(_toConsumableArray(this.state.playerTile))),
-                        playerInfo: this.levelOne.getPlayerInfo(),
-                        collisionInfo: this.levelOne.getCollisionInfo()
-                    });
+                    this.movePlayerSetState("right");
                     break;
                 // ignore if not a move command
                 default:
                     break;
             }
         }
+
+        // Move a player in a given direction and update the components state
+        // interpretation:
+        //      direction: direction the player is to move
+
+    }, {
+        key: "movePlayerSetState",
+        value: function movePlayerSetState(direction) {
+            var _state$level;
+
+            this.setState({
+                playerTile: (_state$level = this.state.level).movePlayer.apply(_state$level, [direction].concat(_toConsumableArray(this.state.playerTile))),
+                playerInfo: this.state.level.getPlayerInfo(),
+                collisionInfo: this.state.level.getCollisionInfo()
+            });
+        }
+
+        // Render the top level component
+
     }, {
         key: "render",
         value: function render() {
             var tiles = [];
             var tileRow = [];
-            for (var _i = 0; _i < this.props.levelHeight; _i++) {
+            for (var i = 0; i < this.props.levelHeight; i++) {
                 for (var j = 0; j < this.props.levelWidth; j++) {
-                    tileRow.push(React.createElement(DungeonTile, { key: _i + j,
-                        tileBG: this.levelOne.getTile(j, _i),
-                        tileMarker: this.levelOne.getMarker(j, _i) }));
+                    tileRow.push(React.createElement(DungeonTile, { key: i + j,
+                        tileBG: this.state.level.getTile(j, i),
+                        tileMarker: this.state.level.getMarker(j, i) }));
                 }
-                tiles.push(React.createElement(DungeonTileRow, { tiles: tileRow, key: _i }));
+                tiles.push(React.createElement(DungeonTileRow, { tiles: tileRow, key: i }));
                 tileRow = [];
             }
             return React.createElement(
                 "div",
                 null,
-                React.createElement(DungeonHeader, { level: this.state.level,
+                React.createElement(DungeonHeader, { level: this.state.levelNum,
                     playerInfo: this.state.playerInfo,
                     collisionInfo: this.state.collisionInfo }),
                 React.createElement(
@@ -128,9 +157,13 @@ var DungeonCrawler = function (_React$Component) {
     return DungeonCrawler;
 }(React.Component);
 
+// Stateless component to render the header to display game info to player
+
+
 var DungeonHeader = function DungeonHeader(props) {
     var collisionMessage = "";
     var enemyHealth = "";
+    // set up messages for the header
     if (!!props.collisionInfo) {
         switch (props.collisionInfo.type) {
             case "potion":
@@ -234,6 +267,9 @@ var DungeonHeader = function DungeonHeader(props) {
     );
 };
 
+// Presentation component for a row of tiles on the level
+// given: an array of tiles
+// expected: each tile laid out next to each other
 var DungeonTileRow = function DungeonTileRow(props) {
     return React.createElement(
         "div",
@@ -242,6 +278,9 @@ var DungeonTileRow = function DungeonTileRow(props) {
     );
 };
 
+// Presentation component that represents a single tile of the level
+// given: a tile with a marker on it
+// expected: a tile with the marker image on top of it
 var DungeonTile = function DungeonTile(props) {
     return React.createElement(
         "div",
@@ -250,10 +289,11 @@ var DungeonTile = function DungeonTile(props) {
     );
 };
 
+// Types of default properties to pass in
 DungeonCrawler.propTypes = {
     levelWidth: React.PropTypes.number,
     levelHeight: React.PropTypes.number,
-    potion: React.PropTypes.shape({
+    potions: React.PropTypes.shape({
         type: React.PropTypes.string,
         num: React.PropTypes.number,
         potionValue: React.PropTypes.number,
@@ -263,19 +303,29 @@ DungeonCrawler.propTypes = {
         type: React.PropTypes.string,
         imgFile: React.PropTypes.string
     }),
-    weaponOne: React.PropTypes.shape({
+    weapons: React.PropTypes.objectOf(React.PropTypes.object),
+    enemies: React.PropTypes.objectOf(React.PropTypes.object),
+    humanPlayer: React.PropTypes.shape({
         type: React.PropTypes.string,
         num: React.PropTypes.number,
         name: React.PropTypes.string,
-        attack: React.PropTypes.number,
+        weapon: React.PropTypes.string,
+        atkDmg: React.PropTypes.number,
+        levelDmgModifier: React.PropTypes.number,
+        health: React.PropTypes.number,
+        XPToLevel: React.PropTypes.number,
         imgFile: React.PropTypes.string
     })
 };
 
+// Default properties
+// Set up size of the level
+// Set up each level with potions/weapons/enemies
+// Set up human player params
 DungeonCrawler.defaultProps = {
     levelWidth: 20,
     levelHeight: 15,
-    potion: {
+    potions: {
         type: "potion",
         num: 5, // num to add
         potionValue: 20, // health restore value
@@ -285,22 +335,60 @@ DungeonCrawler.defaultProps = {
         type: "portal",
         imgFile: "images/portal_25x25.png"
     },
-    weaponOne: {
-        type: "weapon",
-        num: 1,
-        name: "Dagger",
-        damage: 10,
-        imgFile: "images/dagger_25x25.png"
+    weapons: {
+        1: {
+            type: "weapon",
+            num: 1,
+            name: "Dagger",
+            damage: 10,
+            imgFile: "images/dagger_25x25.png"
+        },
+        2: {
+            type: "weapon",
+            num: 1,
+            name: "Spear",
+            damage: 20,
+            imgFile: "images/spear_25x25.png"
+        },
+        3: {
+            type: "weapon",
+            num: 1,
+            name: "Axe",
+            damage: 30,
+            imgFile: "images/axe_25x25.png"
+        }
     },
-    enemyOne: {
-        type: "enemy",
-        num: 10,
-        name: "Bug",
-        atkDmg: 5,
-        atkDmgModifier: 5,
-        health: 20,
-        XPValue: 10,
-        imgFile: "images/bug_25x25.png"
+    enemies: {
+        1: {
+            type: "enemy",
+            num: 10,
+            name: "Bug",
+            atkDmg: 5,
+            atkDmgModifier: 5,
+            health: 20,
+            XPValue: 10,
+            imgFile: "images/bug_25x25.png"
+        },
+        2: {
+            type: "enemy",
+            num: 10,
+            name: "Zombie",
+            atkDmg: 10,
+            atkDmgModifier: 5,
+            health: 40,
+            XPValue: 20,
+            imgFile: "images/zombie_25x25.png"
+        },
+        3: {
+            type: "enemy",
+            num: 10,
+            name: "Skeleton",
+            atkDmg: 15,
+            atkDmgModifier: 5,
+            health: 70,
+            XPValue: 40,
+            imgFile: "images/skeleton_25x25.png"
+        }
     },
     humanPlayer: {
         type: "human",

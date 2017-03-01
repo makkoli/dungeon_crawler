@@ -181,6 +181,11 @@ class DC_Level {
                     maxHealth: markerDesc.maxHealth
                 };
                 return false;
+            case "portal":
+                this.collisionInfo = {
+                    type: "portal"
+                };
+                return true;
             // unknown marker, cannot deal
             default:
                 this.collisionInfo = {
