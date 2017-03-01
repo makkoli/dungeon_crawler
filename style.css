@@ -21,6 +21,23 @@ body {
   -o-border-image: url(images/stone_border.png) 25 repeat;
   border-image: url(images/stone_border.png) 25 repeat; }
 
+.dungeon-header {
+  width: auto;
+  height: auto;
+  text-align: center;
+  color: white;
+  background-color: black; }
+
+.dungeon-player {
+  display: inline-block;
+  width: 50%;
+  text-align: center; }
+
+.dungeon-info {
+  display: inline-block;
+  width: 50%;
+  text-align: center; }
+
 .dungeon-tile-row {
   display: block; }
 

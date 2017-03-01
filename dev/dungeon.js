@@ -30,8 +30,11 @@ class DungeonCrawler extends React.Component {
             i--;
         }
 
-        // set state for the players current tile
+        // set state for the header and players current tile position
         this.state = {
+            level: 1,
+            playerInfo: this.levelOne.getPlayerInfo(),
+            collisionInfo: this.levelOne.getCollisionInfo(),
             playerTile: this.levelOne.getPlayerPosition()
         };
 
@@ -44,25 +47,33 @@ class DungeonCrawler extends React.Component {
             case "ArrowUp":
                 this.setState({
                     playerTile: this.levelOne.movePlayer("up",
-                        ...this.state.playerTile)
+                        ...this.state.playerTile),
+                    playerInfo: this.levelOne.getPlayerInfo(),
+                    collisionInfo: this.levelOne.getCollisionInfo()
                 });
                 break;
             case "ArrowDown":
                 this.setState({
                     playerTile: this.levelOne.movePlayer("down",
-                        ...this.state.playerTile)
+                        ...this.state.playerTile),
+                    playerInfo: this.levelOne.getPlayerInfo(),
+                    collisionInfo: this.levelOne.getCollisionInfo()
                 });
                 break;
             case "ArrowLeft":
                 this.setState({
                     playerTile: this.levelOne.movePlayer("left",
-                        ...this.state.playerTile)
+                        ...this.state.playerTile),
+                    playerInfo: this.levelOne.getPlayerInfo(),
+                    collisionInfo: this.levelOne.getCollisionInfo()
                 });
                 break;
             case "ArrowRight":
                 this.setState({
                     playerTile: this.levelOne.movePlayer("right",
-                        ...this.state.playerTile)
+                        ...this.state.playerTile),
+                    playerInfo: this.levelOne.getPlayerInfo(),
+                    collisionInfo: this.levelOne.getCollisionInfo()
                 });
                 break;
             // ignore if not a move command
@@ -84,15 +95,49 @@ class DungeonCrawler extends React.Component {
             tileRow = [];
         }
         return (
-            <div className="dungeon-container">
-                {tiles}
+            <div>
+                <DungeonHeader level={this.state.level}
+                playerInfo={this.state.playerInfo}
+                collisionInfo={this.state.collisionInfo} />
+                <div className="dungeon-container">
+                    {tiles}
+                </div>
             </div>
         );
     }
 }
 
+const DungeonHeader = (props) => {
+    let collisionMessage = "";
+    if (!!props.collisionInfo) {
+        switch (props.collisionInfo.type) {
+            case "potion":
+                collisionMessage = props.collisionInfo.potionValue + " Health Restored";
+                break;
+            default:
+                break;
+        }
+    }
+    console.log(props.collisionInfo);
+    return (
+        <div className="dungeon-header">
+            <h1>Level {props.level}</h1>
+            <div className="dungeon-player">
+                <h4>{props.playerInfo.name}</h4>
+                <h4><span style={{color: "aqua"}}>{props.playerInfo.health}</span> Health</h4>
+                <h4>
+                    {props.playerInfo.weapon} (<span style={{color: "red"}}>{props.playerInfo.atkDmg}</span>)
+                </h4>
+            </div>
+            <div className="dungeon-info">
+                <h4>{collisionMessage}</h4>
+            </div>
+        </div>
+    );
+}
+
 const DungeonTileRow = (props) => {
-    return <div className="dungeon-tile-row">{props.tiles}</div>
+    return <div className="dungeon-tile-row">{props.tiles}</div>;
 }
 
 const DungeonTile = (props) => {
@@ -131,7 +176,7 @@ DungeonCrawler.propTypes = {
 
 DungeonCrawler.defaultProps = {
     levelWidth: 20,
-    levelHeight: 20,
+    levelHeight: 15,
     potion: {
         type: "potion",
         num: 5,             // num to add
@@ -154,6 +199,7 @@ DungeonCrawler.defaultProps = {
         num: 10,
         name: "Bug",
         atkDmg: 5,
+        atkDmgModifier: 5,
         health: 20,
         imgFile: "images/bug_25x25.png"
     },

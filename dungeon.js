@@ -44,8 +44,11 @@ var DungeonCrawler = function (_React$Component) {
             i--;
         }
 
-        // set state for the players current tile
+        // set state for the header and players current tile position
         _this.state = {
+            level: 1,
+            playerInfo: _this.levelOne.getPlayerInfo(),
+            collisionInfo: _this.levelOne.getCollisionInfo(),
             playerTile: _this.levelOne.getPlayerPosition()
         };
 
@@ -62,22 +65,30 @@ var DungeonCrawler = function (_React$Component) {
             switch (event.key) {
                 case "ArrowUp":
                     this.setState({
-                        playerTile: (_levelOne = this.levelOne).movePlayer.apply(_levelOne, ["up"].concat(_toConsumableArray(this.state.playerTile)))
+                        playerTile: (_levelOne = this.levelOne).movePlayer.apply(_levelOne, ["up"].concat(_toConsumableArray(this.state.playerTile))),
+                        playerInfo: this.levelOne.getPlayerInfo(),
+                        collisionInfo: this.levelOne.getCollisionInfo()
                     });
                     break;
                 case "ArrowDown":
                     this.setState({
-                        playerTile: (_levelOne2 = this.levelOne).movePlayer.apply(_levelOne2, ["down"].concat(_toConsumableArray(this.state.playerTile)))
+                        playerTile: (_levelOne2 = this.levelOne).movePlayer.apply(_levelOne2, ["down"].concat(_toConsumableArray(this.state.playerTile))),
+                        playerInfo: this.levelOne.getPlayerInfo(),
+                        collisionInfo: this.levelOne.getCollisionInfo()
                     });
                     break;
                 case "ArrowLeft":
                     this.setState({
-                        playerTile: (_levelOne3 = this.levelOne).movePlayer.apply(_levelOne3, ["left"].concat(_toConsumableArray(this.state.playerTile)))
+                        playerTile: (_levelOne3 = this.levelOne).movePlayer.apply(_levelOne3, ["left"].concat(_toConsumableArray(this.state.playerTile))),
+                        playerInfo: this.levelOne.getPlayerInfo(),
+                        collisionInfo: this.levelOne.getCollisionInfo()
                     });
                     break;
                 case "ArrowRight":
                     this.setState({
-                        playerTile: (_levelOne4 = this.levelOne).movePlayer.apply(_levelOne4, ["right"].concat(_toConsumableArray(this.state.playerTile)))
+                        playerTile: (_levelOne4 = this.levelOne).movePlayer.apply(_levelOne4, ["right"].concat(_toConsumableArray(this.state.playerTile))),
+                        playerInfo: this.levelOne.getPlayerInfo(),
+                        collisionInfo: this.levelOne.getCollisionInfo()
                     });
                     break;
                 // ignore if not a move command
@@ -101,14 +112,85 @@ var DungeonCrawler = function (_React$Component) {
             }
             return React.createElement(
                 "div",
-                { className: "dungeon-container" },
-                tiles
+                null,
+                React.createElement(DungeonHeader, { level: this.state.level,
+                    playerInfo: this.state.playerInfo,
+                    collisionInfo: this.state.collisionInfo }),
+                React.createElement(
+                    "div",
+                    { className: "dungeon-container" },
+                    tiles
+                )
             );
         }
     }]);
 
     return DungeonCrawler;
 }(React.Component);
+
+var DungeonHeader = function DungeonHeader(props) {
+    var collisionMessage = "";
+    if (!!props.collisionInfo) {
+        switch (props.collisionInfo.type) {
+            case "potion":
+                collisionMessage = props.collisionInfo.potionValue + " Health Restored";
+                break;
+            default:
+                break;
+        }
+    }
+    console.log(props.collisionInfo);
+    return React.createElement(
+        "div",
+        { className: "dungeon-header" },
+        React.createElement(
+            "h1",
+            null,
+            "Level ",
+            props.level
+        ),
+        React.createElement(
+            "div",
+            { className: "dungeon-player" },
+            React.createElement(
+                "h4",
+                null,
+                props.playerInfo.name
+            ),
+            React.createElement(
+                "h4",
+                null,
+                React.createElement(
+                    "span",
+                    { style: { color: "aqua" } },
+                    props.playerInfo.health
+                ),
+                " Health"
+            ),
+            React.createElement(
+                "h4",
+                null,
+                props.playerInfo.weapon,
+                " (",
+                React.createElement(
+                    "span",
+                    { style: { color: "red" } },
+                    props.playerInfo.atkDmg
+                ),
+                ")"
+            )
+        ),
+        React.createElement(
+            "div",
+            { className: "dungeon-info" },
+            React.createElement(
+                "h4",
+                null,
+                collisionMessage
+            )
+        )
+    );
+};
 
 var DungeonTileRow = function DungeonTileRow(props) {
     return React.createElement(
@@ -150,7 +232,7 @@ DungeonCrawler.propTypes = {
 
 DungeonCrawler.defaultProps = {
     levelWidth: 20,
-    levelHeight: 20,
+    levelHeight: 15,
     potion: {
         type: "potion",
         num: 5, // num to add
@@ -173,6 +255,7 @@ DungeonCrawler.defaultProps = {
         num: 10,
         name: "Bug",
         atkDmg: 5,
+        atkDmgModifier: 5,
         health: 20,
         imgFile: "images/bug_25x25.png"
     },

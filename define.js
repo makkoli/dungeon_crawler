@@ -27,6 +27,8 @@ var DC_Level = function () {
     //  interpretation:
     //      level: level holds the randomly generated maze with markers on it
     //      player: holds the human player state
+    //      collisionInfo: info about the last collision between the player
+    //                     and a marker
     function DC_Level() {
         var tilesWide = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 30;
         var tilesHigh = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 30;
@@ -39,6 +41,9 @@ var DC_Level = function () {
         this.level.addEndCell(this.level.maze, new DC_Portal(endPortal));
         this.player = new DC_Human(humanPlayer);
         this.player.position = this.addPlayer(this.player);
+        this.collisionInfo = {
+            type: null
+        };
     }
 
     // Object -> null
@@ -77,6 +82,29 @@ var DC_Level = function () {
             return this.player.position;
         }
 
+        // null -> Object
+        // Returns the info about the human player
+        // given: a player on the level with name Hero, weapon Fists, health: 100
+        // and attack 5
+        // expected: {name: "Hero", weapon: "Fists", health: 100, attack: 5}
+
+    }, {
+        key: 'getPlayerInfo',
+        value: function getPlayerInfo() {
+            return this.player.getInfo();
+        }
+
+        // null -> Object
+        // Returns details about the last move made that caused a collision
+        // given: a movement where no collision occurs
+        // expected: { type: null }
+
+    }, {
+        key: 'getCollisionInfo',
+        value: function getCollisionInfo() {
+            return this.collisionInfo;
+        }
+
         // String Object Number Number -> [Number]
         // Moves the player in one of four directions
         // given: direction to move the player
@@ -91,44 +119,40 @@ var DC_Level = function () {
         value: function movePlayer(direction, x, y) {
             switch (direction) {
                 case "up":
-                    if (this.checkForCollision(x, y - 1)) {
-                        if (this.handleCollision(this.player, { x: x, y: y }, { x: x, y: y - 1 })) {
-                            return [x, y - 1];
-                        }
-                        return [x, y];
-                    }
-                    this.level.updateMarker(this.player, { x: x, y: y }, { x: x, y: y - 1 });
-                    return [x, y - 1];
+                    return this.handlePlayerMoveFrom({ x: x, y: y }, { x: x, y: y - 1 });
                 case "down":
-                    if (this.checkForCollision(x, y + 1)) {
-                        if (this.handleCollision(this.player, { x: x, y: y }, { x: x, y: y + 1 })) {
-                            return [x, y + 1];
-                        }
-                        return [x, y];
-                    }
-                    this.level.updateMarker(this.player, { x: x, y: y }, { x: x, y: y + 1 });
-                    return [x, y + 1];
+                    return this.handlePlayerMoveFrom({ x: x, y: y }, { x: x, y: y + 1 });
                 case "right":
-                    if (this.checkForCollision(x + 1, y)) {
-                        if (this.handleCollision(this.player, { x: x, y: y }, { x: x + 1, y: y })) {
-                            return [x + 1, y];
-                        }
-                        return [x, y];
-                    }
-                    this.level.updateMarker(this.player, { x: x, y: y }, { x: x + 1, y: y });
-                    return [x + 1, y];
+                    return this.handlePlayerMoveFrom({ x: x, y: y }, { x: x + 1, y: y });
                 case "left":
-                    if (this.checkForCollision(x - 1, y)) {
-                        if (this.handleCollision(this.player, { x: x, y: y }, { x: x - 1, y: y })) {
-                            return [x - 1, y];
-                        }
-                        return [x, y];
-                    }
-                    this.level.updateMarker(this.player, { x: x, y: y }, { x: x - 1, y: y });
-                    return [x - 1, y];
+                    return this.handlePlayerMoveFrom({ x: x, y: y }, { x: x - 1, y: y });
                 default:
                     return [x, y];
             }
+        }
+
+        // { Number, Number } { Number, Number } -> [Number]
+        // Handles the collision logic of the player moving to a new tile
+        // given: moving up to a new position from x,y coordinate
+        // expected: [x, y + 1]
+
+    }, {
+        key: 'handlePlayerMoveFrom',
+        value: function handlePlayerMoveFrom(oldPosn, newPosn) {
+            if (this.checkForCollision(newPosn.x, newPosn.y)) {
+                if (this.handleCollision(this.player, oldPosn, newPosn)) {
+                    return [newPosn.x, newPosn.y];
+                }
+                this.collisionInfo = {
+                    type: null
+                };
+                return [oldPosn.x, oldPosn.y];
+            }
+            this.level.updateMarker(this.player, oldPosn, newPosn);
+            this.collisionInfo = {
+                type: null
+            };
+            return [newPosn.x, newPosn.y];
         }
 
         // Number Number -> Boolean
@@ -164,23 +188,46 @@ var DC_Level = function () {
                 case "potion":
                     playerObj.heal(markerDesc.potionValue);
                     this.level.updateMarker(playerObj, oldPosn, newPosn);
+                    this.collisionInfo = {
+                        type: "potion",
+                        potionValue: markerDesc.potionValue
+                    };
                     return true;
                 // upgrade weapon marker
                 case "weapon":
                     playerObj.updateWeapon(markerDesc.name, markerDesc.damage);
                     this.level.updateMarker(playerObj, oldPosn, newPosn);
+                    this.collisionInfo = {
+                        type: "weapon",
+                        name: markerDesc.name,
+                        damage: markerDesc.damage
+                    };
                     return true;
                 // fight enemy marker
                 case "enemy":
-                    markerDesc.takeDamage(playerObj.attack);
-                    playerObj.takeDamage(markerDesc.attack);
+                    markerDesc.takeDamage(playerObj.performAttack());
+                    playerObj.takeDamage(markerDesc.performAttack());
                     if (markerDesc.health <= 0) {
                         this.level.updateMarker(playerObj, oldPosn, newPosn);
+                        this.collisionInfo = {
+                            type: "enemy",
+                            defeated: true,
+                            name: markerDesc.name
+                        };
                         return true;
                     }
+                    this.collisionInfo = {
+                        type: "enemy",
+                        defeated: false,
+                        name: markerDesc.name,
+                        health: markerDesc.health
+                    };
                     return false;
                 // unknown marker, cannot deal
                 default:
+                    this.collisionInfo = {
+                        type: null
+                    };
                     return false;
             }
         }
@@ -525,6 +572,17 @@ var DC_Player = function () {
             this.health -= damage;
             return this.health;
         }
+
+        // null -> Number
+        // Returns the damage caused by an attack of the player
+        // given: a player that has 5 attack
+        // expected: 5
+
+    }, {
+        key: 'performAttack',
+        value: function performAttack() {
+            return this.attack;
+        }
     }]);
 
     return DC_Player;
@@ -537,17 +595,37 @@ var DC_Enemy = function (_DC_Player) {
     _inherits(DC_Enemy, _DC_Player);
 
     // DC_Enemy constructor creates an enemy object to place on the level
+    //  interpretation:
+    //      atkDmgModifier: modifier that the damage of an attack randomly
     function DC_Enemy(_ref) {
         var type = _ref.type,
             atkDmg = _ref.atkDmg,
             name = _ref.name,
             health = _ref.health,
+            _ref$atkDmgModifier = _ref.atkDmgModifier,
+            atkDmgModifier = _ref$atkDmgModifier === undefined ? 0 : _ref$atkDmgModifier,
             imgFile = _ref.imgFile;
 
         _classCallCheck(this, DC_Enemy);
 
-        return _possibleConstructorReturn(this, (DC_Enemy.__proto__ || Object.getPrototypeOf(DC_Enemy)).call(this, type, atkDmg, name, health, imgFile));
+        var _this = _possibleConstructorReturn(this, (DC_Enemy.__proto__ || Object.getPrototypeOf(DC_Enemy)).call(this, type, atkDmg, name, health, imgFile));
+
+        _this.attackModifier = atkDmgModifier;
+        return _this;
     }
+
+    // null -> Number
+    // Returns the damage caused by an attack of the enemy object
+    // given: an enemy object with 5 attack and a 5 attack damage modifier
+    // expected: 5-9
+
+
+    _createClass(DC_Enemy, [{
+        key: 'performAttack',
+        value: function performAttack() {
+            return this.attack + Math.floor(this.attackModifier * Math.random());
+        }
+    }]);
 
     return DC_Enemy;
 }(DC_Player);
@@ -608,6 +686,23 @@ var DC_Human = function (_DC_Player2) {
             this.weapon = newWeapon;
             this.attack = newDamage;
             return this.weapon;
+        }
+
+        // null -> Object
+        // Retrieves all the properties of the human player object
+        // given: a human with type, name, weapon, atkDmg, health
+        // expected: {type: type, name: name, weapon: weapon, ....}
+
+    }, {
+        key: 'getInfo',
+        value: function getInfo() {
+            return {
+                type: this.type,
+                name: this.name,
+                weapon: this.weapon,
+                health: this.health,
+                atkDmg: this.attack
+            };
         }
     }]);
 

@@ -16,11 +16,16 @@ class DC_Level {
     //  interpretation:
     //      level: level holds the randomly generated maze with markers on it
     //      player: holds the human player state
+    //      collisionInfo: info about the last collision between the player
+    //                     and a marker
     constructor(tilesWide = 30, tilesHigh = 30, humanPlayer, endPortal) {
         this.level = new DC_Maze(tilesWide, tilesHigh);
         this.level.addEndCell(this.level.maze, new DC_Portal(endPortal));
         this.player = new DC_Human(humanPlayer);
         this.player.position = this.addPlayer(this.player);
+        this.collisionInfo = {
+            type: null
+        };
     }
 
     // Object -> null
@@ -50,6 +55,23 @@ class DC_Level {
         return this.player.position;
     }
 
+    // null -> Object
+    // Returns the info about the human player
+    // given: a player on the level with name Hero, weapon Fists, health: 100
+    // and attack 5
+    // expected: {name: "Hero", weapon: "Fists", health: 100, attack: 5}
+    getPlayerInfo() {
+        return this.player.getInfo();
+    }
+
+    // null -> Object
+    // Returns details about the last move made that caused a collision
+    // given: a movement where no collision occurs
+    // expected: { type: null }
+    getCollisionInfo() {
+        return this.collisionInfo;
+    }
+
     // String Object Number Number -> [Number]
     // Moves the player in one of four directions
     // given: direction to move the player
@@ -61,48 +83,37 @@ class DC_Level {
     movePlayer(direction, x, y) {
         switch (direction) {
             case "up":
-                if (this.checkForCollision(x, y - 1)) {
-                    if (this.handleCollision(this.player, {x: x, y: y} ,
-                            {x: x, y: y - 1})) {
-                        return [x, y - 1];
-                    }
-                    return [x, y];
-                }
-                this.level.updateMarker(this.player, {x: x, y: y}, {x: x, y: y - 1});
-                return [x, y - 1];
+                return this.handlePlayerMoveFrom({x: x, y: y}, {x: x, y: y - 1});
             case "down":
-                if (this.checkForCollision(x, y + 1)) {
-                    if (this.handleCollision(this.player, {x: x, y: y},
-                            {x: x, y: y + 1})) {
-                        return [x, y + 1];
-                    }
-                    return [x, y];
-                }
-                this.level.updateMarker(this.player, {x: x, y: y}, {x: x, y: y + 1});
-                return [x, y + 1];
+                return this.handlePlayerMoveFrom({x: x, y: y}, {x: x, y: y + 1});
             case "right":
-                if (this.checkForCollision(x + 1, y)) {
-                    if (this.handleCollision(this.player, {x: x, y: y},
-                            {x: x + 1, y: y})) {
-                        return [x + 1, y];
-                    }
-                    return [x, y];
-                }
-                this.level.updateMarker(this.player, {x: x, y: y}, {x: x + 1, y: y});
-                return [x + 1, y];
+                return this.handlePlayerMoveFrom({x: x, y: y}, {x: x + 1, y: y});
             case "left":
-                if (this.checkForCollision(x - 1, y)) {
-                    if (this.handleCollision(this.player, {x: x, y: y},
-                            {x: x - 1, y: y})) {
-                        return [x - 1, y];
-                    }
-                    return [x, y];
-                }
-                this.level.updateMarker(this.player, {x: x, y: y}, {x: x - 1, y: y});
-                return [x - 1, y];
+                return this.handlePlayerMoveFrom({x: x, y: y}, {x: x - 1, y: y});
             default:
                 return [x, y];
         }
+    }
+
+    // { Number, Number } { Number, Number } -> [Number]
+    // Handles the collision logic of the player moving to a new tile
+    // given: moving up to a new position from x,y coordinate
+    // expected: [x, y + 1]
+    handlePlayerMoveFrom(oldPosn, newPosn) {
+        if (this.checkForCollision(newPosn.x, newPosn.y)) {
+            if (this.handleCollision(this.player, oldPosn, newPosn)) {
+                return [newPosn.x, newPosn.y];
+            }
+            this.collisionInfo = {
+                type: null
+            };
+            return [oldPosn.x, oldPosn.y]
+        }
+        this.level.updateMarker(this.player, oldPosn, newPosn);
+        this.collisionInfo = {
+            type: null
+        };
+        return [newPosn.x, newPosn.y];
     }
 
     // Number Number -> Boolean
@@ -133,23 +144,46 @@ class DC_Level {
             case "potion":
                 playerObj.heal(markerDesc.potionValue);
                 this.level.updateMarker(playerObj, oldPosn, newPosn);
+                this.collisionInfo = {
+                    type: "potion",
+                    potionValue: markerDesc.potionValue
+                };
                 return true;
             // upgrade weapon marker
             case "weapon":
                 playerObj.updateWeapon(markerDesc.name, markerDesc.damage);
                 this.level.updateMarker(playerObj, oldPosn, newPosn);
+                this.collisionInfo = {
+                    type: "weapon",
+                    name: markerDesc.name,
+                    damage: markerDesc.damage
+                };
                 return true;
             // fight enemy marker
             case "enemy":
-                markerDesc.takeDamage(playerObj.attack);
-                playerObj.takeDamage(markerDesc.attack);
+                markerDesc.takeDamage(playerObj.performAttack());
+                playerObj.takeDamage(markerDesc.performAttack());
                 if (markerDesc.health <= 0) {
                     this.level.updateMarker(playerObj, oldPosn, newPosn);
+                    this.collisionInfo = {
+                        type: "enemy",
+                        defeated: true,
+                        name: markerDesc.name
+                    };
                     return true;
                 }
+                this.collisionInfo = {
+                    type: "enemy",
+                    defeated: false,
+                    name: markerDesc.name,
+                    health: markerDesc.health
+                };
                 return false;
             // unknown marker, cannot deal
             default:
+                this.collisionInfo = {
+                    type: null
+                };
                 return false;
         }
     }
@@ -440,14 +474,33 @@ class DC_Player {
         this.health -= damage;
         return this.health;
     }
+
+    // null -> Number
+    // Returns the damage caused by an attack of the player
+    // given: a player that has 5 attack
+    // expected: 5
+    performAttack() {
+        return this.attack;
+    }
 }
 
 // DC_Enemy is a class that holds the data and methods of an enemy in the level
 class DC_Enemy extends DC_Player {
     // DC_Enemy constructor creates an enemy object to place on the level
+    //  interpretation:
+    //      atkDmgModifier: modifier that the damage of an attack randomly
     constructor({type: type, atkDmg: atkDmg, name: name, health: health,
-                imgFile: imgFile}) {
+                atkDmgModifier: atkDmgModifier = 0, imgFile: imgFile}) {
         super(type, atkDmg, name, health, imgFile);
+        this.attackModifier = atkDmgModifier;
+    }
+
+    // null -> Number
+    // Returns the damage caused by an attack of the enemy object
+    // given: an enemy object with 5 attack and a 5 attack damage modifier
+    // expected: 5-9
+    performAttack() {
+        return this.attack + Math.floor(this.attackModifier * Math.random());
     }
 }
 
@@ -487,6 +540,20 @@ class DC_Human extends DC_Player {
         this.weapon = newWeapon;
         this.attack = newDamage;
         return this.weapon;
+    }
+
+    // null -> Object
+    // Retrieves all the properties of the human player object
+    // given: a human with type, name, weapon, atkDmg, health
+    // expected: {type: type, name: name, weapon: weapon, ....}
+    getInfo() {
+        return {
+            type: this.type,
+            name: this.name,
+            weapon: this.weapon,
+            health: this.health,
+            atkDmg: this.attack
+        };
     }
 }
 
