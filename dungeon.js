@@ -130,16 +130,27 @@ var DungeonCrawler = function (_React$Component) {
 
 var DungeonHeader = function DungeonHeader(props) {
     var collisionMessage = "";
+    var enemyHealth = "";
     if (!!props.collisionInfo) {
         switch (props.collisionInfo.type) {
             case "potion":
-                collisionMessage = props.collisionInfo.potionValue + " Health Restored";
+                collisionMessage = props.collisionInfo.potionValue + " health restored";
                 break;
+            case "weapon":
+                collisionMessage = props.collisionInfo.name + " picked up";
+                break;
+            case "enemy":
+                if (props.collisionInfo.defeated) {
+                    collisionMessage = props.collisionInfo.name + " defeated";
+                } else {
+                    collisionMessage = props.collisionInfo.name;
+                    enemyHealth = props.collisionInfo.health + "/" + props.collisionInfo.maxHealth;
+                }
             default:
                 break;
         }
     }
-    console.log(props.collisionInfo);
+
     return React.createElement(
         "div",
         { className: "dungeon-header" },
@@ -155,7 +166,22 @@ var DungeonHeader = function DungeonHeader(props) {
             React.createElement(
                 "h4",
                 null,
-                props.playerInfo.name
+                props.playerInfo.name,
+                "(",
+                React.createElement(
+                    "span",
+                    { style: { color: "darkseagreen" } },
+                    props.playerInfo.level
+                ),
+                ") - ",
+                React.createElement(
+                    "span",
+                    { style: { color: "gold" } },
+                    props.playerInfo.currentXP,
+                    "/",
+                    props.playerInfo.XPToLevel
+                ),
+                " XP"
             ),
             React.createElement(
                 "h4",
@@ -177,6 +203,12 @@ var DungeonHeader = function DungeonHeader(props) {
                     { style: { color: "red" } },
                     props.playerInfo.atkDmg
                 ),
+                " + ",
+                React.createElement(
+                    "span",
+                    { style: { color: "red" } },
+                    props.playerInfo.levelDmgModifier
+                ),
                 ")"
             )
         ),
@@ -187,6 +219,16 @@ var DungeonHeader = function DungeonHeader(props) {
                 "h4",
                 null,
                 collisionMessage
+            ),
+            React.createElement(
+                "h4",
+                null,
+                React.createElement(
+                    "span",
+                    { style: { color: "aqua" } },
+                    enemyHealth
+                ),
+                enemyHealth ? " Health" : ""
             )
         )
     );
@@ -257,6 +299,7 @@ DungeonCrawler.defaultProps = {
         atkDmg: 5,
         atkDmgModifier: 5,
         health: 20,
+        XPValue: 10,
         imgFile: "images/bug_25x25.png"
     },
     humanPlayer: {
@@ -265,7 +308,9 @@ DungeonCrawler.defaultProps = {
         name: "Hero",
         weapon: "Fists",
         atkDmg: 5,
+        levelDmgModifier: 2,
         health: 100,
+        XPToLevel: 75,
         imgFile: "images/player_25x25.png"
     }
 };

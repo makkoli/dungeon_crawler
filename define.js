@@ -143,9 +143,6 @@ var DC_Level = function () {
                 if (this.handleCollision(this.player, oldPosn, newPosn)) {
                     return [newPosn.x, newPosn.y];
                 }
-                this.collisionInfo = {
-                    type: null
-                };
                 return [oldPosn.x, oldPosn.y];
             }
             this.level.updateMarker(this.player, oldPosn, newPosn);
@@ -179,6 +176,9 @@ var DC_Level = function () {
         value: function handleCollision(playerObj, oldPosn, newPosn) {
             // if wall, just return current location
             if (this.level.getTile(oldPosn.x, oldPosn.y) === "wall") {
+                this.collisionInfo = {
+                    type: null
+                };
                 return false;
             }
 
@@ -209,6 +209,7 @@ var DC_Level = function () {
                     playerObj.takeDamage(markerDesc.performAttack());
                     if (markerDesc.health <= 0) {
                         this.level.updateMarker(playerObj, oldPosn, newPosn);
+                        playerObj.addXP(markerDesc.XPValue);
                         this.collisionInfo = {
                             type: "enemy",
                             defeated: true,
@@ -220,7 +221,8 @@ var DC_Level = function () {
                         type: "enemy",
                         defeated: false,
                         name: markerDesc.name,
-                        health: markerDesc.health
+                        health: markerDesc.health,
+                        maxHealth: markerDesc.maxHealth
                     };
                     return false;
                 // unknown marker, cannot deal
@@ -572,17 +574,6 @@ var DC_Player = function () {
             this.health -= damage;
             return this.health;
         }
-
-        // null -> Number
-        // Returns the damage caused by an attack of the player
-        // given: a player that has 5 attack
-        // expected: 5
-
-    }, {
-        key: 'performAttack',
-        value: function performAttack() {
-            return this.attack;
-        }
     }]);
 
     return DC_Player;
@@ -597,6 +588,8 @@ var DC_Enemy = function (_DC_Player) {
     // DC_Enemy constructor creates an enemy object to place on the level
     //  interpretation:
     //      atkDmgModifier: modifier that the damage of an attack randomly
+    //      maxHealth: max amount of health the enemy has
+    //      XPValue: how much xp the enemy gives upon defeat
     function DC_Enemy(_ref) {
         var type = _ref.type,
             atkDmg = _ref.atkDmg,
@@ -604,6 +597,7 @@ var DC_Enemy = function (_DC_Player) {
             health = _ref.health,
             _ref$atkDmgModifier = _ref.atkDmgModifier,
             atkDmgModifier = _ref$atkDmgModifier === undefined ? 0 : _ref$atkDmgModifier,
+            XPValue = _ref.XPValue,
             imgFile = _ref.imgFile;
 
         _classCallCheck(this, DC_Enemy);
@@ -611,6 +605,8 @@ var DC_Enemy = function (_DC_Player) {
         var _this = _possibleConstructorReturn(this, (DC_Enemy.__proto__ || Object.getPrototypeOf(DC_Enemy)).call(this, type, atkDmg, name, health, imgFile));
 
         _this.attackModifier = atkDmgModifier;
+        _this.maxHealth = health;
+        _this.XPValue = XPValue;
         return _this;
     }
 
@@ -641,12 +637,21 @@ var DC_Human = function (_DC_Player2) {
     // interpretation:
     //      weapon: current weapon of human player
     //      position: current position on the level of the player
+    //      level: current level of the player
+    //      levelDmgModifier: how much extra damage the player has from
+    //                        their level
+    //      currentXP: current amount of experience the player has
+    //      XPToLevel: how much experience required to level
     function DC_Human(_ref2) {
         var type = _ref2.type,
             atkDmg = _ref2.atkDmg,
             name = _ref2.name,
             weapon = _ref2.weapon,
             health = _ref2.health,
+            _ref2$levelDmgModifie = _ref2.levelDmgModifier,
+            levelDmgModifier = _ref2$levelDmgModifie === undefined ? 2 : _ref2$levelDmgModifie,
+            _ref2$XPToLevel = _ref2.XPToLevel,
+            XPToLevel = _ref2$XPToLevel === undefined ? 75 : _ref2$XPToLevel,
             imgFile = _ref2.imgFile;
 
         _classCallCheck(this, DC_Human);
@@ -655,6 +660,10 @@ var DC_Human = function (_DC_Player2) {
 
         _this2.weapon = weapon;
         _this2.position = 0;
+        _this2.level = 1;
+        _this2.levelDmgModifier = levelDmgModifier;
+        _this2.currentXP = 0;
+        _this2.XPToLevel = XPToLevel;
         return _this2;
     }
 
@@ -688,6 +697,37 @@ var DC_Human = function (_DC_Player2) {
             return this.weapon;
         }
 
+        // null -> Number
+        // Returns the damage caused by an attack of the player
+        // given: a player that has 5 attack
+        // expected: 5
+
+    }, {
+        key: 'performAttack',
+        value: function performAttack() {
+            return this.attack + this.levelDmgModifier;
+        }
+
+        // Number -> Number
+        // Adds XP to a player and checks if the player should level
+        // If the player levels, the XP required to level doubles for the next level
+        // and the level damage modifier is also doubled
+        // given: a player with 10 experience and 20 experience just gained
+        // expected: 30
+
+    }, {
+        key: 'addXP',
+        value: function addXP(xp) {
+            this.currentXP += xp;
+            if (this.currentXP >= this.XPToLevel) {
+                this.level++;
+                this.currentXP -= this.XPToLevel;
+                this.XPToLevel += this.XPToLevel;
+                this.levelDmgModifier += this.levelDmgModifier;
+            }
+            return this.currentXP;
+        }
+
         // null -> Object
         // Retrieves all the properties of the human player object
         // given: a human with type, name, weapon, atkDmg, health
@@ -701,7 +741,11 @@ var DC_Human = function (_DC_Player2) {
                 name: this.name,
                 weapon: this.weapon,
                 health: this.health,
-                atkDmg: this.attack
+                atkDmg: this.attack,
+                level: this.level,
+                levelDmgModifier: this.levelDmgModifier,
+                currentXP: this.currentXP,
+                XPToLevel: this.XPToLevel
             };
         }
     }]);

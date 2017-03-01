@@ -109,28 +109,60 @@ class DungeonCrawler extends React.Component {
 
 const DungeonHeader = (props) => {
     let collisionMessage = "";
+    let enemyHealth = "";
     if (!!props.collisionInfo) {
         switch (props.collisionInfo.type) {
             case "potion":
-                collisionMessage = props.collisionInfo.potionValue + " Health Restored";
+                collisionMessage = `${props.collisionInfo.potionValue} health restored`;
                 break;
+            case "weapon":
+                collisionMessage = `${props.collisionInfo.name} picked up`;
+                break;
+            case "enemy":
+                if (props.collisionInfo.defeated) {
+                    collisionMessage = `${props.collisionInfo.name} defeated`;
+                }
+                else {
+                    collisionMessage = props.collisionInfo.name;
+                    enemyHealth = `${props.collisionInfo.health}/${props.collisionInfo.maxHealth}`;
+                }
             default:
                 break;
         }
     }
-    console.log(props.collisionInfo);
+
     return (
         <div className="dungeon-header">
             <h1>Level {props.level}</h1>
             <div className="dungeon-player">
-                <h4>{props.playerInfo.name}</h4>
-                <h4><span style={{color: "aqua"}}>{props.playerInfo.health}</span> Health</h4>
                 <h4>
-                    {props.playerInfo.weapon} (<span style={{color: "red"}}>{props.playerInfo.atkDmg}</span>)
+                    {props.playerInfo.name}
+                    (<span style={{color: "darkseagreen"}}>
+                        {props.playerInfo.level}
+                    </span>) - <span style={{color: "gold"}}>
+                        {props.playerInfo.currentXP}/{props.playerInfo.XPToLevel}
+                    </span> XP
+                </h4>
+                <h4>
+                    <span style={{color: "aqua"}}>
+                        {props.playerInfo.health}
+                    </span> Health
+                </h4>
+                <h4>
+                    {props.playerInfo.weapon} (
+                    <span style={{color: "red"}}>
+                        {props.playerInfo.atkDmg}
+                    </span> + <span style={{color: "red"}}>
+                        {props.playerInfo.levelDmgModifier}
+                    </span>)
                 </h4>
             </div>
             <div className="dungeon-info">
                 <h4>{collisionMessage}</h4>
+                <h4>
+                    <span style={{color: "aqua"}}>{enemyHealth}</span>
+                    {enemyHealth ? " Health": ""}
+                </h4>
             </div>
         </div>
     );
@@ -201,6 +233,7 @@ DungeonCrawler.defaultProps = {
         atkDmg: 5,
         atkDmgModifier: 5,
         health: 20,
+        XPValue: 10,
         imgFile: "images/bug_25x25.png"
     },
     humanPlayer: {
@@ -209,7 +242,9 @@ DungeonCrawler.defaultProps = {
         name: "Hero",
         weapon: "Fists",
         atkDmg: 5,
+        levelDmgModifier: 2,
         health: 100,
+        XPToLevel: 75,
         imgFile: "images/player_25x25.png"
     }
 };

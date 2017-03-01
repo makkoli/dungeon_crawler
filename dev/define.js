@@ -104,9 +104,6 @@ class DC_Level {
             if (this.handleCollision(this.player, oldPosn, newPosn)) {
                 return [newPosn.x, newPosn.y];
             }
-            this.collisionInfo = {
-                type: null
-            };
             return [oldPosn.x, oldPosn.y]
         }
         this.level.updateMarker(this.player, oldPosn, newPosn);
@@ -135,6 +132,9 @@ class DC_Level {
     handleCollision(playerObj, oldPosn, newPosn) {
         // if wall, just return current location
         if (this.level.getTile(oldPosn.x, oldPosn.y) === "wall") {
+            this.collisionInfo = {
+                type: null
+            };
             return false;
         }
 
@@ -165,6 +165,7 @@ class DC_Level {
                 playerObj.takeDamage(markerDesc.performAttack());
                 if (markerDesc.health <= 0) {
                     this.level.updateMarker(playerObj, oldPosn, newPosn);
+                    playerObj.addXP(markerDesc.XPValue);
                     this.collisionInfo = {
                         type: "enemy",
                         defeated: true,
@@ -176,7 +177,8 @@ class DC_Level {
                     type: "enemy",
                     defeated: false,
                     name: markerDesc.name,
-                    health: markerDesc.health
+                    health: markerDesc.health,
+                    maxHealth: markerDesc.maxHealth
                 };
                 return false;
             // unknown marker, cannot deal
@@ -474,14 +476,6 @@ class DC_Player {
         this.health -= damage;
         return this.health;
     }
-
-    // null -> Number
-    // Returns the damage caused by an attack of the player
-    // given: a player that has 5 attack
-    // expected: 5
-    performAttack() {
-        return this.attack;
-    }
 }
 
 // DC_Enemy is a class that holds the data and methods of an enemy in the level
@@ -489,10 +483,15 @@ class DC_Enemy extends DC_Player {
     // DC_Enemy constructor creates an enemy object to place on the level
     //  interpretation:
     //      atkDmgModifier: modifier that the damage of an attack randomly
+    //      maxHealth: max amount of health the enemy has
+    //      XPValue: how much xp the enemy gives upon defeat
     constructor({type: type, atkDmg: atkDmg, name: name, health: health,
-                atkDmgModifier: atkDmgModifier = 0, imgFile: imgFile}) {
+                atkDmgModifier: atkDmgModifier = 0, XPValue: XPValue,
+                imgFile: imgFile}) {
         super(type, atkDmg, name, health, imgFile);
         this.attackModifier = atkDmgModifier;
+        this.maxHealth = health;
+        this.XPValue = XPValue;
     }
 
     // null -> Number
@@ -511,11 +510,21 @@ class DC_Human extends DC_Player {
     // interpretation:
     //      weapon: current weapon of human player
     //      position: current position on the level of the player
+    //      level: current level of the player
+    //      levelDmgModifier: how much extra damage the player has from
+    //                        their level
+    //      currentXP: current amount of experience the player has
+    //      XPToLevel: how much experience required to level
     constructor({type: type, atkDmg: atkDmg, name: name, weapon: weapon,
-                health: health, imgFile: imgFile}) {
+                health: health, levelDmgModifier: levelDmgModifier = 2,
+                XPToLevel: XPToLevel = 75, imgFile: imgFile}) {
         super(type, atkDmg, name, health, imgFile);
         this.weapon = weapon;
         this.position = 0;
+        this.level = 1;
+        this.levelDmgModifier = levelDmgModifier;
+        this.currentXP = 0;
+        this.XPToLevel = XPToLevel;
     }
 
     // Number -> Number
@@ -542,6 +551,31 @@ class DC_Human extends DC_Player {
         return this.weapon;
     }
 
+    // null -> Number
+    // Returns the damage caused by an attack of the player
+    // given: a player that has 5 attack
+    // expected: 5
+    performAttack() {
+        return this.attack + this.levelDmgModifier;
+    }
+
+    // Number -> Number
+    // Adds XP to a player and checks if the player should level
+    // If the player levels, the XP required to level doubles for the next level
+    // and the level damage modifier is also doubled
+    // given: a player with 10 experience and 20 experience just gained
+    // expected: 30
+    addXP(xp) {
+        this.currentXP += xp;
+        if (this.currentXP >= this.XPToLevel) {
+            this.level++;
+            this.currentXP -= this.XPToLevel;
+            this.XPToLevel += this.XPToLevel;
+            this.levelDmgModifier += this.levelDmgModifier;
+        }
+        return this.currentXP;
+    }
+
     // null -> Object
     // Retrieves all the properties of the human player object
     // given: a human with type, name, weapon, atkDmg, health
@@ -552,7 +586,11 @@ class DC_Human extends DC_Player {
             name: this.name,
             weapon: this.weapon,
             health: this.health,
-            atkDmg: this.attack
+            atkDmg: this.attack,
+            level: this.level,
+            levelDmgModifier: this.levelDmgModifier,
+            currentXP: this.currentXP,
+            XPToLevel: this.XPToLevel
         };
     }
 }
