@@ -27,6 +27,9 @@ var DC_Level = function () {
     //  interpretation:
     //      level: level holds the randomly generated maze with markers on it
     //      player: holds the human player state
+    //      endCellPosn: holds the cell position for the victory condition of
+    //                   the level, is used to replace a portal with a boss
+    //                   victory condition
     //      collisionInfo: info about the last collision between the player
     //                     and a marker
     function DC_Level() {
@@ -38,7 +41,7 @@ var DC_Level = function () {
         _classCallCheck(this, DC_Level);
 
         this.level = new DC_Maze(tilesWide, tilesHigh);
-        this.level.addEndCell(this.level.maze, new DC_Portal(endPortal));
+        this.endCellPosn = this.level.addEndCell(this.level.maze, new DC_Portal(endPortal));
         this.player = new DC_Human(humanPlayer);
         this.player.position = this.addPlayer(this.player);
         this.collisionInfo = {
@@ -56,6 +59,17 @@ var DC_Level = function () {
         key: 'addMarker',
         value: function addMarker(markerObj) {
             this.level.addMarker(this.level.maze, this.level.openings, markerObj);
+        }
+
+        // Object, Object -> null
+        // Adds a boss to the level and replaces the end portal originally put
+        // given: a boss object to place on the level
+        // expected: a level with a boss instead of a portal as a victory condition
+
+    }, {
+        key: 'addBoss',
+        value: function addBoss(boss) {
+            this.level.changeMarker(boss, this.endCellPosn.x, this.endCellPosn.y);
         }
 
         // Object -> Number
@@ -448,7 +462,7 @@ var DC_Maze = function () {
         // Sets the end(winning) position on the level
         // given: an array that is a solvable maze with the last position in the
         //      bottom right to be maze.length - 1
-        // expected: maze.length - 1
+        // expected: {x: maze.length - 1 % 30, y: i / x}
 
     }, {
         key: 'addEndCell',
@@ -456,7 +470,11 @@ var DC_Maze = function () {
             for (var i = level.length - 1; i > 0; i--) {
                 if (level[i] === OPENING_CHAR) {
                     level[i] = portal;
-                    return i;
+                    this.openings.splice(this.openings.indexOf(i), 1);
+                    return {
+                        x: i % this.tilesWide,
+                        y: Math.floor(i / this.tilesWide)
+                    };
                 }
             }
         }
@@ -539,6 +557,22 @@ var DC_Maze = function () {
             this.openings.push(oldPosn.x + oldPosn.y * this.tilesWide);
             this.maze[newPosn.x + newPosn.y * this.tilesWide] = markerObj;
             return true;
+        }
+
+        // Object Object -> Boolean
+        // Changes a marker at a position on the maze
+        // given: newMarkerObj specifying a new marker to place on a tile
+        //        posn of the marker to change
+        // expected: true if marker was changed, false otherwise
+
+    }, {
+        key: 'changeMarker',
+        value: function changeMarker(newMarkerObj, x, y) {
+            if (this.getMarker(x, y)) {
+                this.maze[x + y * this.tilesWide] = newMarkerObj;
+                return true;
+            }
+            return false;
         }
     }]);
 
@@ -653,8 +687,12 @@ var DC_Human = function (_DC_Player2) {
             name = _ref2.name,
             weapon = _ref2.weapon,
             health = _ref2.health,
+            _ref2$level = _ref2.level,
+            level = _ref2$level === undefined ? 1 : _ref2$level,
             _ref2$levelDmgModifie = _ref2.levelDmgModifier,
             levelDmgModifier = _ref2$levelDmgModifie === undefined ? 2 : _ref2$levelDmgModifie,
+            _ref2$currentXP = _ref2.currentXP,
+            currentXP = _ref2$currentXP === undefined ? 0 : _ref2$currentXP,
             _ref2$XPToLevel = _ref2.XPToLevel,
             XPToLevel = _ref2$XPToLevel === undefined ? 75 : _ref2$XPToLevel,
             imgFile = _ref2.imgFile;
@@ -717,6 +755,7 @@ var DC_Human = function (_DC_Player2) {
         // Adds XP to a player and checks if the player should level
         // If the player levels, the XP required to level doubles for the next level
         // and the level damage modifier is also doubled
+        // The player also gets full health for leveling
         // given: a player with 10 experience and 20 experience just gained
         // expected: 30
 
@@ -729,6 +768,7 @@ var DC_Human = function (_DC_Player2) {
                 this.currentXP -= this.XPToLevel;
                 this.XPToLevel += this.XPToLevel;
                 this.levelDmgModifier += this.levelDmgModifier;
+                this.health = 100;
             }
             return this.currentXP;
         }
@@ -750,7 +790,8 @@ var DC_Human = function (_DC_Player2) {
                 level: this.level,
                 levelDmgModifier: this.levelDmgModifier,
                 currentXP: this.currentXP,
-                XPToLevel: this.XPToLevel
+                XPToLevel: this.XPToLevel,
+                imgFile: this.imgFile
             };
         }
     }]);

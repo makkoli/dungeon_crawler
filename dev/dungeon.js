@@ -14,7 +14,8 @@ class DungeonCrawler extends React.Component {
             this.props.levelHeight, this.props.humanPlayer,
             this.props.endPortal, this.props.potions,
             this.props.weapons[this.levelNum],
-            this.props.enemies[this.levelNum]);
+            this.props.enemies[this.levelNum],
+            this.levelNum === this.props.numLevels, this.props.boss);
 
         // set state for the header and players current tile position
         this.state = {
@@ -38,7 +39,8 @@ class DungeonCrawler extends React.Component {
     //    potion: params for potion object
     //    weapon: params for weapon object
     //    enemy: params for enemy object
-    setupLevel(width, height, player, endPortal, potion, weapon, enemy) {
+    setupLevel(width, height, player, endPortal, potion, weapon, enemy, addBoss,
+               boss) {
         let level = new DC_Level(width, height, player, endPortal);
 
         let i = potion.num;
@@ -62,6 +64,10 @@ class DungeonCrawler extends React.Component {
             i--;
         }
 
+        if (addBoss) {
+            level.addBoss(boss);
+        }
+
         return level;
     }
 
@@ -81,9 +87,17 @@ class DungeonCrawler extends React.Component {
             case "ArrowRight":
                 this.movePlayerSetState("right");
                 break;
+            case "s":
+                this.getNextLevel();
+                break;
             // ignore if not a move command
             default:
                 break;
+        }
+
+        // need to get the next level
+        if (this.state.collisionInfo.type === "portal") {
+            this.getNextLevel();
         }
     }
 
@@ -96,6 +110,23 @@ class DungeonCrawler extends React.Component {
                 ...this.state.playerTile),
             playerInfo: this.state.level.getPlayerInfo(),
             collisionInfo: this.state.level.getCollisionInfo()
+        });
+    }
+
+    // Gets the next level and updates the current state to reflect this
+    getNextLevel() {
+        let newLevelNum = this.state.levelNum + 1;
+        let newLevel = this.setupLevel(this.props.levelWidth,
+            this.props.levelHeight, this.state.level.getPlayerInfo(),
+            this.props.endPortal, this.props.potions,
+            this.props.weapons[newLevelNum],
+            this.props.enemies[newLevelNum],
+            newLevelNum === this.props.numLevels, this.props.boss);
+
+        this.setState({
+            levelNum: newLevelNum,
+            level: newLevel,
+            playerTile: this.level.getPlayerPosition()
         });
     }
 
@@ -132,6 +163,9 @@ const DungeonHeader = (props) => {
     // set up messages for the header
     if (!!props.collisionInfo) {
         switch (props.collisionInfo.type) {
+            case "portal":
+                collisionMessage = "Warped to next level";
+                break;
             case "potion":
                 collisionMessage = `${props.collisionInfo.potionValue} health restored`;
                 break;
@@ -214,6 +248,7 @@ const DungeonTile = (props) => {
 DungeonCrawler.propTypes = {
     levelWidth: React.PropTypes.number,
     levelHeight: React.PropTypes.number,
+    numLevels: React.PropTypes.number,
     potions: React.PropTypes.shape({
         type: React.PropTypes.string,
         num: React.PropTypes.number,
@@ -246,6 +281,7 @@ DungeonCrawler.propTypes = {
 DungeonCrawler.defaultProps = {
     levelWidth: 20,
     levelHeight: 15,
+    numLevels: 3,
     potions: {
         type: "potion",
         num: 5,             // num to add
@@ -287,7 +323,7 @@ DungeonCrawler.defaultProps = {
             atkDmg: 5,
             atkDmgModifier: 5,
             health: 20,
-            XPValue: 10,
+            XPValue: 15,
             imgFile: "images/bug_25x25.png"
         },
         2: {
@@ -297,7 +333,7 @@ DungeonCrawler.defaultProps = {
             atkDmg: 10,
             atkDmgModifier: 5,
             health: 40,
-            XPValue: 20,
+            XPValue: 25,
             imgFile: "images/zombie_25x25.png"
         },
         3: {
@@ -307,9 +343,19 @@ DungeonCrawler.defaultProps = {
             atkDmg: 15,
             atkDmgModifier: 5,
             health: 70,
-            XPValue: 40,
+            XPValue: 45,
             imgFile: "images/skeleton_25x25.png"
         }
+    },
+    boss: {
+        type: "boss",
+        num: 1,
+        name: "Boss",
+        atkDmg: 20,
+        atkDmgModifier: 5,
+        health: 120,
+        XPValue: 200,
+        imgFile: "images/boss_25x25.png"
     },
     humanPlayer: {
         type: "human",

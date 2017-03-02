@@ -16,11 +16,15 @@ class DC_Level {
     //  interpretation:
     //      level: level holds the randomly generated maze with markers on it
     //      player: holds the human player state
+    //      endCellPosn: holds the cell position for the victory condition of
+    //                   the level, is used to replace a portal with a boss
+    //                   victory condition
     //      collisionInfo: info about the last collision between the player
     //                     and a marker
     constructor(tilesWide = 30, tilesHigh = 30, humanPlayer, endPortal) {
         this.level = new DC_Maze(tilesWide, tilesHigh);
-        this.level.addEndCell(this.level.maze, new DC_Portal(endPortal));
+        this.endCellPosn = this.level.addEndCell(this.level.maze,
+                        new DC_Portal(endPortal));
         this.player = new DC_Human(humanPlayer);
         this.player.position = this.addPlayer(this.player);
         this.collisionInfo = {
@@ -34,6 +38,14 @@ class DC_Level {
     // expected: the level to have the object placed randomly on an open tile
     addMarker(markerObj) {
         this.level.addMarker(this.level.maze, this.level.openings, markerObj);
+    }
+
+    // Object, Object -> null
+    // Adds a boss to the level and replaces the end portal originally put
+    // given: a boss object to place on the level
+    // expected: a level with a boss instead of a portal as a victory condition
+    addBoss(boss) {
+        this.level.changeMarker(boss, this.endCellPosn.x, this.endCellPosn.y);
     }
 
     // Object -> Number
@@ -375,12 +387,16 @@ class DC_Maze {
     // Sets the end(winning) position on the level
     // given: an array that is a solvable maze with the last position in the
     //      bottom right to be maze.length - 1
-    // expected: maze.length - 1
+    // expected: {x: maze.length - 1 % 30, y: i / x}
     addEndCell(level, portal) {
         for (let i = level.length - 1; i > 0; i--) {
             if (level[i] === OPENING_CHAR) {
                 level[i] = portal;
-                return i;
+                this.openings.splice(this.openings.indexOf(i), 1);
+                return {
+                    x: (i % this.tilesWide),
+                    y: Math.floor(i / this.tilesWide)
+                };
             }
         }
     }
@@ -453,6 +469,19 @@ class DC_Maze {
         this.maze[newPosn.x + (newPosn.y * this.tilesWide)] = markerObj;
         return true;
     }
+
+    // Object Object -> Boolean
+    // Changes a marker at a position on the maze
+    // given: newMarkerObj specifying a new marker to place on a tile
+    //        posn of the marker to change
+    // expected: true if marker was changed, false otherwise
+    changeMarker(newMarkerObj, x, y) {
+        if (this.getMarker(x, y)) {
+            this.maze[x + (y * this.tilesWide)] = newMarkerObj;
+            return true;
+        }
+        return false;
+    }
 }
 
 // Parent prototype for players
@@ -521,8 +550,10 @@ class DC_Human extends DC_Player {
     //      currentXP: current amount of experience the player has
     //      XPToLevel: how much experience required to level
     constructor({type: type, atkDmg: atkDmg, name: name, weapon: weapon,
-                health: health, levelDmgModifier: levelDmgModifier = 2,
-                XPToLevel: XPToLevel = 75, imgFile: imgFile}) {
+                health: health, level: level = 1,
+                levelDmgModifier: levelDmgModifier = 2,
+                currentXP: currentXP = 0, XPToLevel: XPToLevel = 75,
+                imgFile: imgFile}) {
         super(type, atkDmg, name, health, imgFile);
         this.weapon = weapon;
         this.position = 0;
@@ -568,6 +599,7 @@ class DC_Human extends DC_Player {
     // Adds XP to a player and checks if the player should level
     // If the player levels, the XP required to level doubles for the next level
     // and the level damage modifier is also doubled
+    // The player also gets full health for leveling
     // given: a player with 10 experience and 20 experience just gained
     // expected: 30
     addXP(xp) {
@@ -577,6 +609,7 @@ class DC_Human extends DC_Player {
             this.currentXP -= this.XPToLevel;
             this.XPToLevel += this.XPToLevel;
             this.levelDmgModifier += this.levelDmgModifier;
+            this.health = 100;
         }
         return this.currentXP;
     }
@@ -595,7 +628,8 @@ class DC_Human extends DC_Player {
             level: this.level,
             levelDmgModifier: this.levelDmgModifier,
             currentXP: this.currentXP,
-            XPToLevel: this.XPToLevel
+            XPToLevel: this.XPToLevel,
+            imgFile: this.imgFile
         };
     }
 }

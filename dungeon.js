@@ -26,7 +26,7 @@ var DungeonCrawler = function (_React$Component) {
         var _this = _possibleConstructorReturn(this, (DungeonCrawler.__proto__ || Object.getPrototypeOf(DungeonCrawler)).call(this, props));
 
         _this.levelNum = 1;
-        _this.level = _this.setupLevel(_this.props.levelWidth, _this.props.levelHeight, _this.props.humanPlayer, _this.props.endPortal, _this.props.potions, _this.props.weapons[_this.levelNum], _this.props.enemies[_this.levelNum]);
+        _this.level = _this.setupLevel(_this.props.levelWidth, _this.props.levelHeight, _this.props.humanPlayer, _this.props.endPortal, _this.props.potions, _this.props.weapons[_this.levelNum], _this.props.enemies[_this.levelNum], _this.levelNum === _this.props.numLevels, _this.props.boss);
 
         // set state for the header and players current tile position
         _this.state = {
@@ -55,7 +55,7 @@ var DungeonCrawler = function (_React$Component) {
 
     _createClass(DungeonCrawler, [{
         key: "setupLevel",
-        value: function setupLevel(width, height, player, endPortal, potion, weapon, enemy) {
+        value: function setupLevel(width, height, player, endPortal, potion, weapon, enemy, addBoss, boss) {
             var level = new DC_Level(width, height, player, endPortal);
 
             var i = potion.num;
@@ -77,6 +77,10 @@ var DungeonCrawler = function (_React$Component) {
             while (i > 0) {
                 level.addMarker(new DC_Enemy(enemy));
                 i--;
+            }
+
+            if (addBoss) {
+                level.addBoss(boss);
             }
 
             return level;
@@ -101,9 +105,17 @@ var DungeonCrawler = function (_React$Component) {
                 case "ArrowRight":
                     this.movePlayerSetState("right");
                     break;
+                case "s":
+                    this.getNextLevel();
+                    break;
                 // ignore if not a move command
                 default:
                     break;
+            }
+
+            // need to get the next level
+            if (this.state.collisionInfo.type === "portal") {
+                this.getNextLevel();
             }
         }
 
@@ -120,6 +132,21 @@ var DungeonCrawler = function (_React$Component) {
                 playerTile: (_state$level = this.state.level).movePlayer.apply(_state$level, [direction].concat(_toConsumableArray(this.state.playerTile))),
                 playerInfo: this.state.level.getPlayerInfo(),
                 collisionInfo: this.state.level.getCollisionInfo()
+            });
+        }
+
+        // Gets the next level and updates the current state to reflect this
+
+    }, {
+        key: "getNextLevel",
+        value: function getNextLevel() {
+            var newLevelNum = this.state.levelNum + 1;
+            var newLevel = this.setupLevel(this.props.levelWidth, this.props.levelHeight, this.state.level.getPlayerInfo(), this.props.endPortal, this.props.potions, this.props.weapons[newLevelNum], this.props.enemies[newLevelNum], newLevelNum === this.props.numLevels, this.props.boss);
+
+            this.setState({
+                levelNum: newLevelNum,
+                level: newLevel,
+                playerTile: this.level.getPlayerPosition()
             });
         }
 
@@ -166,6 +193,9 @@ var DungeonHeader = function DungeonHeader(props) {
     // set up messages for the header
     if (!!props.collisionInfo) {
         switch (props.collisionInfo.type) {
+            case "portal":
+                collisionMessage = "Warped to next level";
+                break;
             case "potion":
                 collisionMessage = props.collisionInfo.potionValue + " health restored";
                 break;
@@ -293,6 +323,7 @@ var DungeonTile = function DungeonTile(props) {
 DungeonCrawler.propTypes = {
     levelWidth: React.PropTypes.number,
     levelHeight: React.PropTypes.number,
+    numLevels: React.PropTypes.number,
     potions: React.PropTypes.shape({
         type: React.PropTypes.string,
         num: React.PropTypes.number,
@@ -325,6 +356,7 @@ DungeonCrawler.propTypes = {
 DungeonCrawler.defaultProps = {
     levelWidth: 20,
     levelHeight: 15,
+    numLevels: 3,
     potions: {
         type: "potion",
         num: 5, // num to add
@@ -366,7 +398,7 @@ DungeonCrawler.defaultProps = {
             atkDmg: 5,
             atkDmgModifier: 5,
             health: 20,
-            XPValue: 10,
+            XPValue: 15,
             imgFile: "images/bug_25x25.png"
         },
         2: {
@@ -376,7 +408,7 @@ DungeonCrawler.defaultProps = {
             atkDmg: 10,
             atkDmgModifier: 5,
             health: 40,
-            XPValue: 20,
+            XPValue: 25,
             imgFile: "images/zombie_25x25.png"
         },
         3: {
@@ -386,9 +418,19 @@ DungeonCrawler.defaultProps = {
             atkDmg: 15,
             atkDmgModifier: 5,
             health: 70,
-            XPValue: 40,
+            XPValue: 45,
             imgFile: "images/skeleton_25x25.png"
         }
+    },
+    boss: {
+        type: "boss",
+        num: 1,
+        name: "Boss",
+        atkDmg: 20,
+        atkDmgModifier: 5,
+        health: 120,
+        XPValue: 200,
+        imgFile: "images/boss_25x25.png"
     },
     humanPlayer: {
         type: "human",
