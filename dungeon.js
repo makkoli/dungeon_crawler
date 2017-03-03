@@ -27,6 +27,7 @@ var DungeonCrawler = function (_React$Component) {
 
         _this.levelNum = 1;
         _this.level = _this.setupLevel(_this.props.levelWidth, _this.props.levelHeight, _this.props.humanPlayer, _this.props.endPortal, _this.props.potions, _this.props.weapons[_this.levelNum], _this.props.enemies[_this.levelNum], _this.levelNum === _this.props.numLevels, _this.props.boss);
+        _this.moveListener = _this.movePlayer.bind(_this);
 
         // set state for the header and players current tile position
         _this.state = {
@@ -34,11 +35,12 @@ var DungeonCrawler = function (_React$Component) {
             level: _this.level,
             playerInfo: _this.level.getPlayerInfo(),
             collisionInfo: _this.level.getCollisionInfo(),
-            playerTile: _this.level.getPlayerPosition()
+            playerTile: _this.level.getPlayerPosition(),
+            gameOver: false
         };
 
         // add listener for user input
-        document.addEventListener('keydown', _this.movePlayer.bind(_this));
+        document.addEventListener('keydown', _this.moveListener);
         return _this;
     }
 
@@ -80,7 +82,7 @@ var DungeonCrawler = function (_React$Component) {
             }
 
             if (addBoss) {
-                level.addBoss(boss);
+                level.addBoss(new DC_Enemy(boss));
             }
 
             return level;
@@ -117,6 +119,13 @@ var DungeonCrawler = function (_React$Component) {
             if (this.state.collisionInfo.type === "portal") {
                 this.getNextLevel();
             }
+            // check if game is over
+            if (this.state.collisionInfo.gameOver) {
+                this.setState({
+                    gameOver: true
+                });
+                document.removeEventListener('keydown', this.moveListener);
+            }
         }
 
         // Move a player in a given direction and update the components state
@@ -150,6 +159,28 @@ var DungeonCrawler = function (_React$Component) {
             });
         }
 
+        // Restarts a game at level 1
+
+    }, {
+        key: "restart",
+        value: function restart() {
+            this.levelNum = 1;
+            this.level = this.setupLevel(this.props.levelWidth, this.props.levelHeight, this.props.humanPlayer, this.props.endPortal, this.props.potions, this.props.weapons[this.levelNum], this.props.enemies[this.levelNum], this.levelNum === this.props.numLevels, this.props.boss);
+
+            // set state for the header and players current tile position
+            this.setState({
+                levelNum: this.levelNum,
+                level: this.level,
+                playerInfo: this.level.getPlayerInfo(),
+                collisionInfo: this.level.getCollisionInfo(),
+                playerTile: this.level.getPlayerPosition(),
+                gameOver: false
+            });
+
+            // add listener for user input
+            document.addEventListener('keydown', this.moveListener);
+        }
+
         // Render the top level component
 
     }, {
@@ -171,7 +202,9 @@ var DungeonCrawler = function (_React$Component) {
                 null,
                 React.createElement(DungeonHeader, { level: this.state.levelNum,
                     playerInfo: this.state.playerInfo,
-                    collisionInfo: this.state.collisionInfo }),
+                    collisionInfo: this.state.collisionInfo,
+                    isGameOver: this.state.gameOver,
+                    restart: this.restart.bind(this) }),
                 React.createElement(
                     "div",
                     { className: "dungeon-container" },
@@ -188,6 +221,108 @@ var DungeonCrawler = function (_React$Component) {
 
 
 var DungeonHeader = function DungeonHeader(props) {
+    return React.createElement(
+        "div",
+        { className: "dungeon-header" },
+        React.createElement(HeaderInfo, { level: props.level,
+            isGameOver: props.isGameOver,
+            restart: props.restart }),
+        React.createElement(PlayerInfo, { name: props.playerInfo.name,
+            level: props.playerInfo.level,
+            currentXP: props.playerInfo.currentXP,
+            XPToLevel: props.playerInfo.XPToLevel,
+            health: props.playerInfo.health,
+            weapon: props.playerInfo.weapon,
+            atkDmg: props.playerInfo.atkDmg,
+            levelDmgModifier: props.playerInfo.levelDmgModifier }),
+        React.createElement(GameInfo, { collisionInfo: props.collisionInfo })
+    );
+};
+
+// Presentation component with either level or victory/defeat
+var HeaderInfo = function HeaderInfo(props) {
+    var title = void 0;
+    if (props.isGameOver) {
+        title = React.createElement(
+            "h1",
+            null,
+            "You Lose. ",
+            React.createElement(
+                "u",
+                { style: { cursor: "pointer" }, onClick: props.restart },
+                "Try Again?"
+            )
+        );
+    } else {
+        title = React.createElement(
+            "h1",
+            null,
+            "Level ",
+            props.level
+        );
+    }
+
+    return title;
+};
+
+// Presentation component with all the current info about the player
+var PlayerInfo = function PlayerInfo(props) {
+    return React.createElement(
+        "div",
+        { className: "dungeon-player" },
+        React.createElement(
+            "h4",
+            null,
+            props.name,
+            "(",
+            React.createElement(
+                "span",
+                { style: { color: "darkseagreen" } },
+                props.level
+            ),
+            ") - ",
+            React.createElement(
+                "span",
+                { style: { color: "gold" } },
+                props.currentXP,
+                "/",
+                props.XPToLevel
+            ),
+            " XP"
+        ),
+        React.createElement(
+            "h4",
+            null,
+            React.createElement(
+                "span",
+                { style: { color: "aqua" } },
+                props.health
+            ),
+            " Health"
+        ),
+        React.createElement(
+            "h4",
+            null,
+            props.weapon,
+            " (",
+            React.createElement(
+                "span",
+                { style: { color: "red" } },
+                props.atkDmg
+            ),
+            " + ",
+            React.createElement(
+                "span",
+                { style: { color: "red" } },
+                props.levelDmgModifier
+            ),
+            ")"
+        )
+    );
+};
+
+// Presentation component with the info about current game actions
+var GameInfo = function GameInfo(props) {
     var collisionMessage = "";
     var enemyHealth = "";
     // set up messages for the header
@@ -209,6 +344,15 @@ var DungeonHeader = function DungeonHeader(props) {
                     collisionMessage = props.collisionInfo.name;
                     enemyHealth = props.collisionInfo.health + "/" + props.collisionInfo.maxHealth;
                 }
+                break;
+            case "boss":
+                if (props.collisionInfo.defeated) {
+                    collisionMessage = props.collisionInfo.name + " defeated";
+                } else {
+                    collisionMessage = props.collisionInfo.name;
+                    enemyHealth = props.collisionInfo.health + "/" + props.collisionInfo.maxHealth;
+                }
+                break;
             default:
                 break;
         }
@@ -216,83 +360,21 @@ var DungeonHeader = function DungeonHeader(props) {
 
     return React.createElement(
         "div",
-        { className: "dungeon-header" },
+        { className: "dungeon-info" },
         React.createElement(
-            "h1",
+            "h4",
             null,
-            "Level ",
-            props.level
+            collisionMessage
         ),
         React.createElement(
-            "div",
-            { className: "dungeon-player" },
+            "h4",
+            null,
             React.createElement(
-                "h4",
-                null,
-                props.playerInfo.name,
-                "(",
-                React.createElement(
-                    "span",
-                    { style: { color: "darkseagreen" } },
-                    props.playerInfo.level
-                ),
-                ") - ",
-                React.createElement(
-                    "span",
-                    { style: { color: "gold" } },
-                    props.playerInfo.currentXP,
-                    "/",
-                    props.playerInfo.XPToLevel
-                ),
-                " XP"
+                "span",
+                { style: { color: "aqua" } },
+                enemyHealth
             ),
-            React.createElement(
-                "h4",
-                null,
-                React.createElement(
-                    "span",
-                    { style: { color: "aqua" } },
-                    props.playerInfo.health
-                ),
-                " Health"
-            ),
-            React.createElement(
-                "h4",
-                null,
-                props.playerInfo.weapon,
-                " (",
-                React.createElement(
-                    "span",
-                    { style: { color: "red" } },
-                    props.playerInfo.atkDmg
-                ),
-                " + ",
-                React.createElement(
-                    "span",
-                    { style: { color: "red" } },
-                    props.playerInfo.levelDmgModifier
-                ),
-                ")"
-            )
-        ),
-        React.createElement(
-            "div",
-            { className: "dungeon-info" },
-            React.createElement(
-                "h4",
-                null,
-                collisionMessage
-            ),
-            React.createElement(
-                "h4",
-                null,
-                React.createElement(
-                    "span",
-                    { style: { color: "aqua" } },
-                    enemyHealth
-                ),
-                enemyHealth ? " Health" : ""
-            )
+            enemyHealth ? " Health" : ""
         )
     );
 };
@@ -360,7 +442,7 @@ DungeonCrawler.defaultProps = {
     potions: {
         type: "potion",
         num: 5, // num to add
-        potionValue: 20, // health restore value
+        potionValue: 25, // health restore value
         imgFile: "images/potion_25x25.png"
     },
     endPortal: {
@@ -418,7 +500,7 @@ DungeonCrawler.defaultProps = {
             atkDmg: 15,
             atkDmgModifier: 5,
             health: 70,
-            XPValue: 45,
+            XPValue: 50,
             imgFile: "images/skeleton_25x25.png"
         }
     },

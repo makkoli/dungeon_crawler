@@ -136,7 +136,7 @@ class DC_Level {
 
     // Object Number Number -> [Number]
     // Handles collision resolution between the player object and a
-    // marker/wall on the map
+    // marker/wall on the map. Also updates collision info
     // given: playerObj representing the player
     //        x, y is the new x, y position of the player and there is a marker
     //        on the x,y position
@@ -157,7 +157,7 @@ class DC_Level {
                 playerObj.heal(markerDesc.potionValue);
                 this.level.updateMarker(playerObj, oldPosn, newPosn);
                 this.collisionInfo = {
-                    type: "potion",
+                    type: markerDesc.type,
                     potionValue: markerDesc.potionValue
                 };
                 return true;
@@ -166,36 +166,29 @@ class DC_Level {
                 playerObj.updateWeapon(markerDesc.name, markerDesc.damage);
                 this.level.updateMarker(playerObj, oldPosn, newPosn);
                 this.collisionInfo = {
-                    type: "weapon",
+                    type: markerDesc.type,
                     name: markerDesc.name,
                     damage: markerDesc.damage
                 };
                 return true;
             // fight enemy marker
             case "enemy":
-                markerDesc.takeDamage(playerObj.performAttack());
-                playerObj.takeDamage(markerDesc.performAttack());
+                this.collisionInfo = this.handleFight(playerObj, markerDesc,
+                                                      oldPosn, newPosn);
                 if (markerDesc.health <= 0) {
-                    this.level.updateMarker(playerObj, oldPosn, newPosn);
-                    playerObj.addXP(markerDesc.XPValue);
-                    this.collisionInfo = {
-                        type: "enemy",
-                        defeated: true,
-                        name: markerDesc.name
-                    };
                     return true;
                 }
-                this.collisionInfo = {
-                    type: "enemy",
-                    defeated: false,
-                    name: markerDesc.name,
-                    health: markerDesc.health,
-                    maxHealth: markerDesc.maxHealth
-                };
+                return false;
+            case "boss":
+                this.collisionInfo = this.handleFight(playerObj, markerDesc,
+                                                      oldPosn, newPosn);
+                if (markerDesc.health <= 0) {
+                    return true;
+                }
                 return false;
             case "portal":
                 this.collisionInfo = {
-                    type: "portal"
+                    type: markerDesc.type
                 };
                 return true;
             // unknown marker, cannot deal
@@ -205,6 +198,38 @@ class DC_Level {
                 };
                 return false;
         }
+    }
+
+    // Handles a fight between an enemy and the player
+    handleFight(player, enemy, oldPosn, newPosn) {
+        enemy.takeDamage(player.performAttack());
+        player.takeDamage(enemy.performAttack());
+        if (enemy.health <= 0) {
+            this.level.updateMarker(player, oldPosn, newPosn);
+            player.addXP(enemy.XPValue);
+            return {
+                type: enemy.type,
+                defeated: true,
+                name: enemy.name,
+                gameOver: this.isGameOver()
+            };
+        }
+        return {
+            type: enemy.type,
+            defeated: false,
+            name: enemy.name,
+            health: enemy.health,
+            maxHealth: enemy.maxHealth,
+            gameOver: this.isGameOver()
+        };
+    }
+
+    // null -> Boolean
+    // Checks if the game is over when player dies
+    // given: player with 5 health, expected false
+    // given: player with -10 health, expected true
+    isGameOver() {
+        return this.player.health <= 0;
     }
 
     // null -> Number
@@ -556,10 +581,9 @@ class DC_Human extends DC_Player {
                 imgFile: imgFile}) {
         super(type, atkDmg, name, health, imgFile);
         this.weapon = weapon;
-        this.position = 0;
-        this.level = 1;
+        this.level = level;
         this.levelDmgModifier = levelDmgModifier;
-        this.currentXP = 0;
+        this.currentXP = currentXP;
         this.XPToLevel = XPToLevel;
     }
 

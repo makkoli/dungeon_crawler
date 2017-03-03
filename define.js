@@ -179,7 +179,7 @@ var DC_Level = function () {
 
         // Object Number Number -> [Number]
         // Handles collision resolution between the player object and a
-        // marker/wall on the map
+        // marker/wall on the map. Also updates collision info
         // given: playerObj representing the player
         //        x, y is the new x, y position of the player and there is a marker
         //        on the x,y position
@@ -203,7 +203,7 @@ var DC_Level = function () {
                     playerObj.heal(markerDesc.potionValue);
                     this.level.updateMarker(playerObj, oldPosn, newPosn);
                     this.collisionInfo = {
-                        type: "potion",
+                        type: markerDesc.type,
                         potionValue: markerDesc.potionValue
                     };
                     return true;
@@ -212,36 +212,27 @@ var DC_Level = function () {
                     playerObj.updateWeapon(markerDesc.name, markerDesc.damage);
                     this.level.updateMarker(playerObj, oldPosn, newPosn);
                     this.collisionInfo = {
-                        type: "weapon",
+                        type: markerDesc.type,
                         name: markerDesc.name,
                         damage: markerDesc.damage
                     };
                     return true;
                 // fight enemy marker
                 case "enemy":
-                    markerDesc.takeDamage(playerObj.performAttack());
-                    playerObj.takeDamage(markerDesc.performAttack());
+                    this.collisionInfo = this.handleFight(playerObj, markerDesc, oldPosn, newPosn);
                     if (markerDesc.health <= 0) {
-                        this.level.updateMarker(playerObj, oldPosn, newPosn);
-                        playerObj.addXP(markerDesc.XPValue);
-                        this.collisionInfo = {
-                            type: "enemy",
-                            defeated: true,
-                            name: markerDesc.name
-                        };
                         return true;
                     }
-                    this.collisionInfo = {
-                        type: "enemy",
-                        defeated: false,
-                        name: markerDesc.name,
-                        health: markerDesc.health,
-                        maxHealth: markerDesc.maxHealth
-                    };
+                    return false;
+                case "boss":
+                    this.collisionInfo = this.handleFight(playerObj, markerDesc, oldPosn, newPosn);
+                    if (markerDesc.health <= 0) {
+                        return true;
+                    }
                     return false;
                 case "portal":
                     this.collisionInfo = {
-                        type: "portal"
+                        type: markerDesc.type
                     };
                     return true;
                 // unknown marker, cannot deal
@@ -251,6 +242,44 @@ var DC_Level = function () {
                     };
                     return false;
             }
+        }
+
+        // Handles a fight between an enemy and the player
+
+    }, {
+        key: 'handleFight',
+        value: function handleFight(player, enemy, oldPosn, newPosn) {
+            enemy.takeDamage(player.performAttack());
+            player.takeDamage(enemy.performAttack());
+            if (enemy.health <= 0) {
+                this.level.updateMarker(player, oldPosn, newPosn);
+                player.addXP(enemy.XPValue);
+                return {
+                    type: enemy.type,
+                    defeated: true,
+                    name: enemy.name,
+                    gameOver: this.isGameOver()
+                };
+            }
+            return {
+                type: enemy.type,
+                defeated: false,
+                name: enemy.name,
+                health: enemy.health,
+                maxHealth: enemy.maxHealth,
+                gameOver: this.isGameOver()
+            };
+        }
+
+        // null -> Boolean
+        // Checks if the game is over when player dies
+        // given: player with 5 health, expected false
+        // given: player with -10 health, expected true
+
+    }, {
+        key: 'isGameOver',
+        value: function isGameOver() {
+            return this.player.health <= 0;
         }
 
         // null -> Number
@@ -702,10 +731,9 @@ var DC_Human = function (_DC_Player2) {
         var _this2 = _possibleConstructorReturn(this, (DC_Human.__proto__ || Object.getPrototypeOf(DC_Human)).call(this, type, atkDmg, name, health, imgFile));
 
         _this2.weapon = weapon;
-        _this2.position = 0;
-        _this2.level = 1;
+        _this2.level = level;
         _this2.levelDmgModifier = levelDmgModifier;
-        _this2.currentXP = 0;
+        _this2.currentXP = currentXP;
         _this2.XPToLevel = XPToLevel;
         return _this2;
     }

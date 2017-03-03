@@ -1,4 +1,4 @@
-"use strict"
+ "use strict"
 
 // State component to hold state of the game
 class DungeonCrawler extends React.Component {
@@ -16,6 +16,7 @@ class DungeonCrawler extends React.Component {
             this.props.weapons[this.levelNum],
             this.props.enemies[this.levelNum],
             this.levelNum === this.props.numLevels, this.props.boss);
+        this.moveListener = this.movePlayer.bind(this);
 
         // set state for the header and players current tile position
         this.state = {
@@ -23,11 +24,12 @@ class DungeonCrawler extends React.Component {
             level: this.level,
             playerInfo: this.level.getPlayerInfo(),
             collisionInfo: this.level.getCollisionInfo(),
-            playerTile: this.level.getPlayerPosition()
+            playerTile: this.level.getPlayerPosition(),
+            gameOver: false
         };
 
         // add listener for user input
-        document.addEventListener('keydown', this.movePlayer.bind(this));
+        document.addEventListener('keydown', this.moveListener);
     }
 
     // initialize a level with given parameters
@@ -65,7 +67,7 @@ class DungeonCrawler extends React.Component {
         }
 
         if (addBoss) {
-            level.addBoss(boss);
+            level.addBoss(new DC_Enemy(boss));
         }
 
         return level;
@@ -99,6 +101,13 @@ class DungeonCrawler extends React.Component {
         if (this.state.collisionInfo.type === "portal") {
             this.getNextLevel();
         }
+        // check if game is over
+        if (this.state.collisionInfo.gameOver) {
+            this.setState({
+                gameOver: true
+            });
+            document.removeEventListener('keydown', this.moveListener);
+        }
     }
 
     // Move a player in a given direction and update the components state
@@ -130,6 +139,30 @@ class DungeonCrawler extends React.Component {
         });
     }
 
+    // Restarts a game at level 1
+    restart() {
+        this.levelNum = 1;
+        this.level = this.setupLevel(this.props.levelWidth,
+            this.props.levelHeight, this.props.humanPlayer,
+            this.props.endPortal, this.props.potions,
+            this.props.weapons[this.levelNum],
+            this.props.enemies[this.levelNum],
+            this.levelNum === this.props.numLevels, this.props.boss);
+
+        // set state for the header and players current tile position
+        this.setState({
+            levelNum: this.levelNum,
+            level: this.level,
+            playerInfo: this.level.getPlayerInfo(),
+            collisionInfo: this.level.getCollisionInfo(),
+            playerTile: this.level.getPlayerPosition(),
+            gameOver: false
+        });
+
+        // add listener for user input
+        document.addEventListener('keydown', this.moveListener);
+    }
+
     // Render the top level component
     render() {
         let tiles = [];
@@ -146,8 +179,10 @@ class DungeonCrawler extends React.Component {
         return (
             <div>
                 <DungeonHeader level={this.state.levelNum}
-                playerInfo={this.state.playerInfo}
-                collisionInfo={this.state.collisionInfo} />
+                    playerInfo={this.state.playerInfo}
+                    collisionInfo={this.state.collisionInfo}
+                    isGameOver={this.state.gameOver}
+                    restart={this.restart.bind(this)} />
                 <div className="dungeon-container">
                     {tiles}
                 </div>
@@ -158,6 +193,72 @@ class DungeonCrawler extends React.Component {
 
 // Stateless component to render the header to display game info to player
 const DungeonHeader = (props) => {
+    return (
+        <div className="dungeon-header">
+            <HeaderInfo level={props.level}
+                isGameOver={props.isGameOver}
+                restart={props.restart} />
+            <PlayerInfo name={props.playerInfo.name}
+                level={props.playerInfo.level}
+                currentXP={props.playerInfo.currentXP}
+                XPToLevel={props.playerInfo.XPToLevel}
+                health={props.playerInfo.health}
+                weapon={props.playerInfo.weapon}
+                atkDmg={props.playerInfo.atkDmg}
+                levelDmgModifier={props.playerInfo.levelDmgModifier} />
+            <GameInfo collisionInfo={props.collisionInfo} />
+        </div>
+    );
+}
+
+// Presentation component with either level or victory/defeat
+const HeaderInfo = (props) => {
+    let title;
+    if (props.isGameOver) {
+        title = (
+            <h1>
+                You Lose. <u style={{cursor: "pointer"}} onClick={props.restart}>Try Again?</u>
+            </h1>
+        );
+    }
+    else {
+        title = <h1>Level {props.level}</h1>;
+    }
+
+    return title;
+}
+
+// Presentation component with all the current info about the player
+const PlayerInfo = (props) => {
+    return (
+        <div className="dungeon-player">
+            <h4>
+                {props.name}
+                (<span style={{color: "darkseagreen"}}>
+                    {props.level}
+                </span>) - <span style={{color: "gold"}}>
+                    {props.currentXP}/{props.XPToLevel}
+                </span> XP
+            </h4>
+            <h4>
+                <span style={{color: "aqua"}}>
+                    {props.health}
+                </span> Health
+            </h4>
+            <h4>
+                {props.weapon} (
+                <span style={{color: "red"}}>
+                    {props.atkDmg}
+                </span> + <span style={{color: "red"}}>
+                    {props.levelDmgModifier}
+                </span>)
+            </h4>
+        </div>
+    );
+}
+
+// Presentation component with the info about current game actions
+const GameInfo = (props) => {
     let collisionMessage = "";
     let enemyHealth = "";
     // set up messages for the header
@@ -180,44 +281,28 @@ const DungeonHeader = (props) => {
                     collisionMessage = props.collisionInfo.name;
                     enemyHealth = `${props.collisionInfo.health}/${props.collisionInfo.maxHealth}`;
                 }
+                break;
+            case "boss":
+                if (props.collisionInfo.defeated) {
+                    collisionMessage = `${props.collisionInfo.name} defeated`;
+                }
+                else {
+                    collisionMessage = props.collisionInfo.name;
+                    enemyHealth = `${props.collisionInfo.health}/${props.collisionInfo.maxHealth}`;
+                }
+                break;
             default:
                 break;
         }
     }
 
     return (
-        <div className="dungeon-header">
-            <h1>Level {props.level}</h1>
-            <div className="dungeon-player">
-                <h4>
-                    {props.playerInfo.name}
-                    (<span style={{color: "darkseagreen"}}>
-                        {props.playerInfo.level}
-                    </span>) - <span style={{color: "gold"}}>
-                        {props.playerInfo.currentXP}/{props.playerInfo.XPToLevel}
-                    </span> XP
-                </h4>
-                <h4>
-                    <span style={{color: "aqua"}}>
-                        {props.playerInfo.health}
-                    </span> Health
-                </h4>
-                <h4>
-                    {props.playerInfo.weapon} (
-                    <span style={{color: "red"}}>
-                        {props.playerInfo.atkDmg}
-                    </span> + <span style={{color: "red"}}>
-                        {props.playerInfo.levelDmgModifier}
-                    </span>)
-                </h4>
-            </div>
-            <div className="dungeon-info">
-                <h4>{collisionMessage}</h4>
-                <h4>
-                    <span style={{color: "aqua"}}>{enemyHealth}</span>
-                    {enemyHealth ? " Health": ""}
-                </h4>
-            </div>
+        <div className="dungeon-info">
+            <h4>{collisionMessage}</h4>
+            <h4>
+                <span style={{color: "aqua"}}>{enemyHealth}</span>
+                {enemyHealth ? " Health": ""}
+            </h4>
         </div>
     );
 }
@@ -285,7 +370,7 @@ DungeonCrawler.defaultProps = {
     potions: {
         type: "potion",
         num: 5,             // num to add
-        potionValue: 20,    // health restore value
+        potionValue: 25,    // health restore value
         imgFile: "images/potion_25x25.png"
     },
     endPortal: {
@@ -343,7 +428,7 @@ DungeonCrawler.defaultProps = {
             atkDmg: 15,
             atkDmgModifier: 5,
             health: 70,
-            XPValue: 45,
+            XPValue: 50,
             imgFile: "images/skeleton_25x25.png"
         }
     },
