@@ -53,7 +53,8 @@ h4 {
   display: inline-block;
   width: 25px;
   height: 25px;
-  background-image: url("./images/ground_25x25.png"); }
+  background-image: url("./images/ground_25x25.png");
+  vertical-align: bottom; }
   .dungeon-tile-opening img {
     width: 25px;
     height: 25px;
@@ -65,12 +66,14 @@ h4 {
   display: inline-block;
   width: 25px;
   height: 25px;
-  background-image: url("./images/stone_25x25.png"); }
+  background-image: url("./images/stone_25x25.png");
+  vertical-align: bottom; }
 
 .dungeon-tile-empty {
   display: inline-block;
   width: 25px;
   height: 25px;
-  background-color: black; }
+  background-color: black;
+  vertical-align: bottom; }
 
 /*# sourceMappingURL=style.css.map */
