@@ -117,7 +117,6 @@ class DC_Level {
         }
         // else, only get tiles from the radius argument
         else {
-            console.log(this.player.position);
             return this.getMazeInRadius(radius, this.player.position);
         }
     }
@@ -155,7 +154,6 @@ class DC_Level {
             mazeRow = [];
         }
 
-        console.log(mazeArr);
         return mazeArr;
     }
 

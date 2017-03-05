@@ -16,7 +16,8 @@ h4 {
   margin-right: -50%;
   transform: translate(-50%, -50%);
   height: auto;
-  width: auto; }
+  width: auto;
+  min-width: 550px; }
 
 .dungeon-container {
   padding: 0;

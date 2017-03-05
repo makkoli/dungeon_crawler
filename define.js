@@ -157,7 +157,6 @@ var DC_Level = function () {
             }
             // else, only get tiles from the radius argument
             else {
-                    console.log(this.player.position);
                     return this.getMazeInRadius(radius, this.player.position);
                 }
         }
@@ -197,7 +196,6 @@ var DC_Level = function () {
                 mazeRow = [];
             }
 
-            console.log(mazeArr);
             return mazeArr;
         }
 
