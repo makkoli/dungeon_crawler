@@ -25,6 +25,8 @@ var DC_Level = function () {
     // level. Also, takes and adds markers for potions, weapon(s), enemies, the
     // human player, and the end portal for the level.
     //  interpretation:
+    //      tilesWide: tile width of level
+    //      tilesHigh: tile height of level
     //      level: level holds the randomly generated maze with markers on it
     //      player: holds the human player state
     //      endCellPosn: holds the cell position for the victory condition of
@@ -40,6 +42,8 @@ var DC_Level = function () {
 
         _classCallCheck(this, DC_Level);
 
+        this.tilesWide = tilesWide;
+        this.tilesHigh = tilesHigh;
         this.level = new DC_Maze(tilesWide, tilesHigh);
         this.endCellPosn = this.level.addEndCell(this.level.maze, new DC_Portal(endPortal));
         this.player = new DC_Human(humanPlayer);
@@ -72,17 +76,17 @@ var DC_Level = function () {
             this.level.changeMarker(boss, this.endCellPosn.x, this.endCellPosn.y);
         }
 
-        // Object -> Number
+        // Object -> Object
         // Places the human player sprite on the level
         // given: an object representing the player
-        // expected: the start tile position the player sprite is on in [x,y] format
+        // expected: the start tile position the player sprite is on in {x,y} format
 
     }, {
         key: 'addPlayer',
         value: function addPlayer(playerObj) {
             this.level.addMarker(this.level.maze, this.level.openings, playerObj, START_POS_X, START_POS_Y);
 
-            return [START_POS_X, START_POS_Y];
+            return { x: START_POS_X, y: START_POS_Y };
         }
 
         // null -> Number
@@ -119,13 +123,91 @@ var DC_Level = function () {
             return this.collisionInfo;
         }
 
+        // Number -> [[Object]]
+        // Returns the entire maze with the marker and the tile type
+        // as a multidimensional array of objects describing each tile
+        // Optionally takes a radius to set how many tiles are to be returned
+        // around the player's position
+        // given: a maze with a row of 25 tiles and a column of 25 tiles
+        // expected: [[...25 tiles per row], ...25 arrays]
+
+    }, {
+        key: 'getMaze',
+        value: function getMaze() {
+            var radius = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : -1;
+
+            // Return the entire maze if no radius
+            if (radius < 0) {
+                var mazeArr = [],
+                    mazeRow = [];
+
+                for (var i = 0; i < this.tilesHigh; i++) {
+                    for (var j = 0; j < this.tilesWide; j++) {
+                        mazeRow.push({
+                            key: i + j,
+                            tileBG: this.getTile(j, i),
+                            tileMarker: this.getMarker(j, i)
+                        });
+                    }
+                    mazeArr.push(mazeRow);
+                    mazeRow = [];
+                }
+
+                return mazeArr;
+            }
+            // else, only get tiles from the radius argument
+            else {
+                    console.log(this.player.position);
+                    return this.getMazeInRadius(radius, this.player.position);
+                }
+        }
+
+        // Number Object -> [[Object]]
+        // Returns the tiles around a radius centered on the center position
+        // given: a radius of 5 on center {x:0, y:0}
+        // expected: a multi array with the tiles returned in the radius and the
+        //           rest of the maze being null
+
+    }, {
+        key: 'getMazeInRadius',
+        value: function getMazeInRadius(radius, center) {
+            var mazeArr = [],
+                mazeRow = [];
+
+            for (var i = 0; i < this.tilesHigh; i++) {
+                for (var j = 0; j < this.tilesWide; j++) {
+                    // tile is inside of circle so fetch tile info
+                    if (Math.pow(j - center.x, 2) + Math.pow(i - center.y, 2) < Math.pow(radius, 2)) {
+                        mazeRow.push({
+                            key: i + j,
+                            tileBG: this.getTile(j, i),
+                            tileMarker: this.getMarker(j, i)
+                        });
+                    }
+                    // tile is outside of circle so set to null
+                    else {
+                            mazeRow.push({
+                                key: i + j,
+                                tileBG: null,
+                                tileMarker: null
+                            });
+                        }
+                }
+                mazeArr.push(mazeRow);
+                mazeRow = [];
+            }
+
+            console.log(mazeArr);
+            return mazeArr;
+        }
+
         // String Object Number Number -> [Number]
         // Moves the player in one of four directions
         // given: direction to move the player
         //        player object to move
         //        x coordinate of the player object
         //        y coordinate of the player object
-        // expected: [x, y] coordinate array signifying the new location of the
+        // expected: {x, y} coordinate object signifying the new location of the
         //           player object
 
     }, {
@@ -133,20 +215,21 @@ var DC_Level = function () {
         value: function movePlayer(direction, x, y) {
             switch (direction) {
                 case "up":
-                    return this.handlePlayerMoveFrom({ x: x, y: y }, { x: x, y: y - 1 });
+                    return this.handlePlayerMoveFrom({ x: this.player.position.x, y: this.player.position.y }, { x: this.player.position.x, y: this.player.position.y - 1 });
                 case "down":
-                    return this.handlePlayerMoveFrom({ x: x, y: y }, { x: x, y: y + 1 });
+                    return this.handlePlayerMoveFrom({ x: this.player.position.x, y: this.player.position.y }, { x: this.player.position.x, y: this.player.position.y + 1 });
                 case "right":
-                    return this.handlePlayerMoveFrom({ x: x, y: y }, { x: x + 1, y: y });
+                    return this.handlePlayerMoveFrom({ x: this.player.position.x, y: this.player.position.y }, { x: this.player.position.x + 1, y: this.player.position.y });
                 case "left":
-                    return this.handlePlayerMoveFrom({ x: x, y: y }, { x: x - 1, y: y });
+                    return this.handlePlayerMoveFrom({ x: this.player.position.x, y: this.player.position.y }, { x: this.player.position.x - 1, y: this.player.position.y });
                 default:
-                    return [x, y];
+                    return { x: this.player.position.x, y: this.player.position.y };
             }
         }
 
         // { Number, Number } { Number, Number } -> [Number]
         // Handles the collision logic of the player moving to a new tile
+        // and updates the players current position on the level
         // given: moving up to a new position from x,y coordinate
         // expected: [x, y + 1]
 
@@ -155,15 +238,17 @@ var DC_Level = function () {
         value: function handlePlayerMoveFrom(oldPosn, newPosn) {
             if (this.checkForCollision(newPosn.x, newPosn.y)) {
                 if (this.handleCollision(this.player, oldPosn, newPosn)) {
-                    return [newPosn.x, newPosn.y];
+                    this.player.position = { x: newPosn.x, y: newPosn.y };
+                    return { x: newPosn.x, y: newPosn.y };
                 }
-                return [oldPosn.x, oldPosn.y];
+                return { x: oldPosn.x, y: oldPosn.y };
             }
             this.level.updateMarker(this.player, oldPosn, newPosn);
             this.collisionInfo = {
                 type: null
             };
-            return [newPosn.x, newPosn.y];
+            this.player.position = { x: newPosn.x, y: newPosn.y };
+            return { x: newPosn.x, y: newPosn.y };
         }
 
         // Number Number -> Boolean
@@ -258,7 +343,10 @@ var DC_Level = function () {
                     type: enemy.type,
                     defeated: true,
                     name: enemy.name,
-                    gameOver: this.isGameOver()
+                    // check if players health is below 0 or if defeated enemy
+                    // was final boss
+                    playerDead: this.isPlayerDead(),
+                    gameOver: this.isPlayerDead() || enemy.type === "boss"
                 };
             }
             return {
@@ -267,7 +355,8 @@ var DC_Level = function () {
                 name: enemy.name,
                 health: enemy.health,
                 maxHealth: enemy.maxHealth,
-                gameOver: this.isGameOver()
+                playerDead: this.isPlayerDead(),
+                gameOver: this.isPlayerDead()
             };
         }
 
@@ -277,8 +366,8 @@ var DC_Level = function () {
         // given: player with -10 health, expected true
 
     }, {
-        key: 'isGameOver',
-        value: function isGameOver() {
+        key: 'isPlayerDead',
+        value: function isPlayerDead() {
             return this.player.health <= 0;
         }
 

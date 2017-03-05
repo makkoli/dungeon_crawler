@@ -24,8 +24,8 @@ class DungeonCrawler extends React.Component {
             level: this.level,
             playerInfo: this.level.getPlayerInfo(),
             collisionInfo: this.level.getCollisionInfo(),
-            playerTile: this.level.getPlayerPosition(),
-            gameOver: false
+            gameOver: false,
+            gameOverType: ""
         };
 
         // add listener for user input
@@ -103,9 +103,20 @@ class DungeonCrawler extends React.Component {
         }
         // check if game is over
         if (this.state.collisionInfo.gameOver) {
-            this.setState({
-                gameOver: true
-            });
+            // if player beat the game
+            if (!this.state.collisionInfo.playerDead) {
+                this.setState({
+                    gameOver: true,
+                    gameOverType: "win"
+                });
+            }
+            // else, the player lost
+            else {
+                this.setState({
+                    gameOver: true,
+                    gameOverType: "lose"
+                });
+            }
             document.removeEventListener('keydown', this.moveListener);
         }
     }
@@ -114,9 +125,8 @@ class DungeonCrawler extends React.Component {
     // interpretation:
     //      direction: direction the player is to move
     movePlayerSetState(direction) {
+        this.state.level.movePlayer(direction);
         this.setState({
-            playerTile: this.state.level.movePlayer(direction,
-                ...this.state.playerTile),
             playerInfo: this.state.level.getPlayerInfo(),
             collisionInfo: this.state.level.getCollisionInfo()
         });
@@ -134,8 +144,7 @@ class DungeonCrawler extends React.Component {
 
         this.setState({
             levelNum: newLevelNum,
-            level: newLevel,
-            playerTile: this.level.getPlayerPosition()
+            level: newLevel
         });
     }
 
@@ -155,8 +164,8 @@ class DungeonCrawler extends React.Component {
             level: this.level,
             playerInfo: this.level.getPlayerInfo(),
             collisionInfo: this.level.getCollisionInfo(),
-            playerTile: this.level.getPlayerPosition(),
-            gameOver: false
+            gameOver: false,
+            gameOverType: ""
         });
 
         // add listener for user input
@@ -165,13 +174,14 @@ class DungeonCrawler extends React.Component {
 
     // Render the top level component
     render() {
+        let maze = this.state.level.getMaze(this.props.fogOfWarRadius);
         let tiles = [];
         let tileRow = [];
-        for (let i = 0; i < this.props.levelHeight; i++) {
-            for (let j = 0; j < this.props.levelWidth; j++) {
-                tileRow.push(<DungeonTile key={i + j}
-                    tileBG={this.state.level.getTile(j, i)}
-                    tileMarker={this.state.level.getMarker(j, i)} />);
+        for (let i = 0; i < maze.length; i++) {
+            for (let j = 0; j < maze[0].length; j++) {
+                tileRow.push(<DungeonTile key={maze[i][j].key}
+                    tileBG={maze[i][j].tileBG}
+                    tileMarker={maze[i][j].tileMarker} />);
             }
             tiles.push(<DungeonTileRow tiles={tileRow} key={i} />);
             tileRow = [];
@@ -182,6 +192,7 @@ class DungeonCrawler extends React.Component {
                     playerInfo={this.state.playerInfo}
                     collisionInfo={this.state.collisionInfo}
                     isGameOver={this.state.gameOver}
+                    gameOverType={this.state.gameOverType}
                     restart={this.restart.bind(this)} />
                 <div className="dungeon-container">
                     {tiles}
@@ -197,6 +208,7 @@ const DungeonHeader = (props) => {
         <div className="dungeon-header">
             <HeaderInfo level={props.level}
                 isGameOver={props.isGameOver}
+                gameOverType={props.gameOverType}
                 restart={props.restart} />
             <PlayerInfo name={props.playerInfo.name}
                 level={props.playerInfo.level}
@@ -215,11 +227,22 @@ const DungeonHeader = (props) => {
 const HeaderInfo = (props) => {
     let title;
     if (props.isGameOver) {
-        title = (
-            <h1>
-                You Lose. <u style={{cursor: "pointer"}} onClick={props.restart}>Try Again?</u>
-            </h1>
-        );
+        // player lost
+        if (props.gameOverType === "lose") {
+            title = (
+                <h1 style={{color: "red"}}>
+                    You Lose. <u style={{cursor: "pointer"}} onClick={props.restart}>Play Again?</u>
+                </h1>
+            );
+        }
+        // player won
+        else {
+            title = (
+                <h1 style={{color: "green"}}>
+                    You win. <u style={{cursor: "pointer"}} onClick={props.restart}>Play Again?</u>
+                </h1>
+            );
+        }
     }
     else {
         title = <h1>Level {props.level}</h1>;
@@ -318,8 +341,12 @@ const DungeonTileRow = (props) => {
 // given: a tile with a marker on it
 // expected: a tile with the marker image on top of it
 const DungeonTile = (props) => {
-    return <div className={props.tileBG === "wall" ?
-        "dungeon-tile-wall" : "dungeon-tile-opening"}>
+    let tileBG = "dungeon-tile-empty";
+    if (!!props.tileBG) {
+        tileBG = props.tileBG === "wall" ? "dungeon-tile-wall" : "dungeon-tile-opening";
+    }
+
+    return <div className={tileBG}>
             {
                 !!props.tileMarker ?
                 <img src={props.tileMarker.imgFile} />
@@ -334,6 +361,7 @@ DungeonCrawler.propTypes = {
     levelWidth: React.PropTypes.number,
     levelHeight: React.PropTypes.number,
     numLevels: React.PropTypes.number,
+    fogOfWarRadius: React.PropTypes.number,
     potions: React.PropTypes.shape({
         type: React.PropTypes.string,
         num: React.PropTypes.number,
@@ -367,9 +395,10 @@ DungeonCrawler.defaultProps = {
     levelWidth: 20,
     levelHeight: 15,
     numLevels: 3,
+    fogOfWarRadius: 4,
     potions: {
         type: "potion",
-        num: 5,             // num to add
+        num: 6,             // num to add
         potionValue: 25,    // health restore value
         imgFile: "images/potion_25x25.png"
     },
@@ -403,9 +432,9 @@ DungeonCrawler.defaultProps = {
     enemies: {
         1: {
             type: "enemy",
-            num: 10,
+            num: 12,
             name: "Bug",
-            atkDmg: 5,
+            atkDmg: 3,
             atkDmgModifier: 5,
             health: 20,
             XPValue: 15,
@@ -413,20 +442,20 @@ DungeonCrawler.defaultProps = {
         },
         2: {
             type: "enemy",
-            num: 10,
+            num: 12,
             name: "Zombie",
-            atkDmg: 10,
-            atkDmgModifier: 5,
+            atkDmg: 5,
+            atkDmgModifier: 10,
             health: 40,
             XPValue: 25,
             imgFile: "images/zombie_25x25.png"
         },
         3: {
             type: "enemy",
-            num: 10,
+            num: 12,
             name: "Skeleton",
-            atkDmg: 15,
-            atkDmgModifier: 5,
+            atkDmg: 5,
+            atkDmgModifier: 15,
             health: 70,
             XPValue: 50,
             imgFile: "images/skeleton_25x25.png"
@@ -436,8 +465,8 @@ DungeonCrawler.defaultProps = {
         type: "boss",
         num: 1,
         name: "Boss",
-        atkDmg: 20,
-        atkDmgModifier: 5,
+        atkDmg: 5,
+        atkDmgModifier: 20,
         health: 120,
         XPValue: 200,
         imgFile: "images/boss_25x25.png"
